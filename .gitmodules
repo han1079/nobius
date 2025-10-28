@@ -1,0 +1,11 @@
+[submodule "ext/glm"]
+	path = ext/glm
+	url = git@github.com:g-truc/glm.git
+[submodule "ext/SDL"]
+	path = ext/SDL
+	url = git@github.com:libsdl-org/SDL.git
+	branch = release-2.32.x
+[submodule "ext/imgui"]
+	path = ext/imgui
+	url = git@github.com:ocornut/imgui.git
+	branch = docking
