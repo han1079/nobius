@@ -1,0 +1,21 @@
+# Ignore Build Directories / artifacts
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Ignore binaries, compiler outputs, etc
+*.exe
+*.out
+*.o
+*.so
+*.dll
+*.dylib
+*.a
+
+# Ignore helper files for LSPs
+.vscode/
+.cache/
+.clangd
+.qt*

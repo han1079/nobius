@@ -1,0 +1,31 @@
+Project: mouse_tracker.cpp
+    
+Functionality-to-implement:
+    - Mouse in main drawing area - debug area prints the Mouse X and Mouse Y Positions relative to drawing zero
+    - Mouse in debug area - debug area prints X and Y relative to debug zero
+    - Debug prints the window that is captured
+    - Hold down control and the X,Y tracker tracks the location on the "whole" widget.
+    - Holding down control makes drawing area change color
+app:
+    main layer just runs
+
+
+core:
+    ui:
+        window holds main widget which holds subwidgets
+        subwidget size is split 6:1 main window debug area
+    layer:
+        debug_layer:
+            - Read from global state to know which signal to track 
+            - Runs static method to get appropriate object to read data from
+        drawing_layer:
+            - Read from global state to know which color to render
+        state_machine_layer:
+            - Looks for control press and updates static state class
+    controller:
+        - Creates layer stack
+        - Hooks into QApplication's notify system to grab events
+        - On Event propagates down notifications
+    state_tracker:
+        - Just a class or struct that is written to by state machine.
+        - Singleton
