@@ -42,7 +42,7 @@ add_library(imgui_sanity_check ${CMAKE_SOURCE_DIR}/ext/imgui/imgui_demo.cpp ${IM
 target_include_directories(imgui_sanity_check PRIVATE
     ${CMAKE_SOURCE_DIR}/ext 
     ${CMAKE_SOURCE_DIR}/ext/imgui 
-    ${CMAKE_SOURCE_DIR}/ext/imgui/backend
+    ${CMAKE_SOURCE_DIR}/ext/imgui/backends
     ${CMAKE_SOURCE_DIR}/ext/PortaSDL2)
 
 target_link_directories(imgui_sanity_check PRIVATE
