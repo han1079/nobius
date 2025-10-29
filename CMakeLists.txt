@@ -43,7 +43,8 @@ target_include_directories(imgui_sanity_check PRIVATE
     ${CMAKE_SOURCE_DIR}/ext 
     ${CMAKE_SOURCE_DIR}/ext/imgui 
     ${CMAKE_SOURCE_DIR}/ext/imgui/backends
-    ${CMAKE_SOURCE_DIR}/ext/PortaSDL2)
+    ${CMAKE_SOURCE_DIR}/ext/PortaSDL2
+    ${CMAKE_SOURCE_DIR}/ext/nlohmann_json/single_include)
 
 target_link_directories(imgui_sanity_check PRIVATE
     ${CMAKE_SOURCE_DIR}/ext/PortaSDL2/lib)
