@@ -9,10 +9,7 @@ Makefile
 *.exe
 *.out
 *.o
-*.so
-*.dll
 *.dylib
-*.a
 
 # Ignore helper files for LSPs
 .vscode/
