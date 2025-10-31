@@ -37,14 +37,20 @@ set(IMGUI_SOURCES ${CMAKE_SOURCE_DIR}/ext/imgui/imgui.cpp
                         ${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_opengl3.cpp
 )
 
-add_library(imgui_sanity_check ${CMAKE_SOURCE_DIR}/ext/imgui/imgui_demo.cpp ${IMGUI_SOURCES})
+add_library(imgui_sanity_check ${CMAKE_SOURCE_DIR}/ext/imgui/imgui_demo.cpp 
+                               ${CMAKE_SOURCE_DIR}/src/core/common.cpp 
+                               ${IMGUI_SOURCES})
 
 target_include_directories(imgui_sanity_check PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/ext 
+    ${CMAKE_SOURCE_DIR}/ext/glm
     ${CMAKE_SOURCE_DIR}/ext/imgui 
     ${CMAKE_SOURCE_DIR}/ext/imgui/backends
     ${CMAKE_SOURCE_DIR}/ext/PortaSDL2
     ${CMAKE_SOURCE_DIR}/ext/nlohmann_json/single_include)
+
+target_precompile_headers(imgui_sanity_check PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
 
 target_link_directories(imgui_sanity_check PRIVATE
     ${CMAKE_SOURCE_DIR}/ext/PortaSDL2/lib)
