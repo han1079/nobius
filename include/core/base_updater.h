@@ -11,6 +11,9 @@ class BaseUpdater {
 private:
     std::string m_layer_name;
 public:
+    BaseUpdater();
+    virtual ~BaseUpdater();
+protected:
     virtual bool init();
     virtual bool shutdown();
     virtual bool update_state_via_event(SDL_Event &event);

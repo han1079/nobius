@@ -3,14 +3,21 @@
 #include <core/common.h>
 #include <core/base_state.h>
 
-class WindowState : public BaseState {
+
+class RendererState : public BaseState {
 public:
-    WindowState() = default;
-    ~WindowState() = default;
+    RendererState() = delete;
+    RendererState(const std::optional<std::string>& fpath);
+    ~RendererState();
+
+protected:
+
+    void load_from_json(const std::optional<std::string>& fpath = std::nullopt) override;
+
 private:
 
 
-    // SDL and OpenGL configuration parameters
+    // SDL and OpenGL default configuration parameters
     int sdl_flags = 0;
     SDL_GLprofile sdl_profile_mask = SDL_GL_CONTEXT_PROFILE_CORE;
     int sdl_major_version = 3;
@@ -34,6 +41,27 @@ private:
     
     glm::vec4 gl_clear_color = {0.45f, 0.55f, 0.60f, 1.00f};
 
+    bool sidebar_visible = true;
+    bool bottom_visible = true;
+    bool ribbon_visible = true;
+    bool viewport_visible = true;
+
     friend class Renderer;
     friend class Orchestrator;
+
+private:
+
+    int event_count = 0;
+    
+    template <typename member_type>
+    auto get(member_type member_name) -> decltype(this->*member_name) {
+        return (this)->*member_name;
+    }
+
+    template <typename member_type, typename value_type>
+    void set(member_type member_name, value_type val) {
+        (this)->*member_name = val; 
+    }
+
+
 };

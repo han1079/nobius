@@ -1,25 +1,24 @@
 #pragma once
-#include <pch.h>
-#include <core/common.h>
-#include <core/base_state.h>
-#include <core/entity.h>
 
-class WorldState : public BaseState {
+#include <core/base_state.h>
+#include <core/common.h>
+#include <pch.h>
+
+class ModeState : public BaseState { 
 public:
-    WorldState() = default;
-    WorldState(const std::optional<std::string>& fpath);
-    ~WorldState() = default;
+
+    ModeState() = default;
+    ModeState(const std::optional<std::string>& fpath);
+    ~ModeState() = default;
+
 
 protected:
 
     void load_from_json(const std::optional<std::string>& fpath = std::nullopt) override;
 private:
-    int num_entities;
-    glm::mat4 clip_transform_mat;
-    std::unique_ptr<std::unordered_map<int, Entity>> EntityRegister;    
-
-private:
-
+    // Mode Informatin
+    
+    uint32_t user_mode = MODE_SELECT;
     template <typename member_type>
     auto get(member_type member_name) -> decltype(this->*member_name) {
         return (this)->*member_name;

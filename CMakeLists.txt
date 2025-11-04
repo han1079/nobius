@@ -37,24 +37,47 @@ set(IMGUI_SOURCES ${CMAKE_SOURCE_DIR}/ext/imgui/imgui.cpp
                         ${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_opengl3.cpp
 )
 
+set(CORE_BUILD ${CMAKE_SOURCE_DIR}/src/core/base_state.cpp
+                ${CMAKE_SOURCE_DIR}/src/core/base_updater.cpp
+                ${CMAKE_SOURCE_DIR}/src/core/common.cpp
+                ${CMAKE_SOURCE_DIR}/src/core/entity.cpp
+                ${CMAKE_SOURCE_DIR}/src/updaters/orchestrator.cpp
+                ${CMAKE_SOURCE_DIR}/src/updaters/world_updater.cpp
+                ${CMAKE_SOURCE_DIR}/src/state/world_state.cpp
+                ${CMAKE_SOURCE_DIR}/src/updaters/mode_updater.cpp
+                ${CMAKE_SOURCE_DIR}/src/state/mode_state.cpp
+                ${CMAKE_SOURCE_DIR}/src/updaters/renderer.cpp
+                ${CMAKE_SOURCE_DIR}/src/state/renderer_state.cpp)
+
+set(APP_INCLUDE_PATHS ${CMAKE_SOURCE_DIR}/include
+                       ${CMAKE_SOURCE_DIR}/ext 
+                       ${CMAKE_SOURCE_DIR}/ext/glm
+                       ${CMAKE_SOURCE_DIR}/ext/imgui 
+                       ${CMAKE_SOURCE_DIR}/ext/imgui/backends
+                       ${CMAKE_SOURCE_DIR}/ext/PortaSDL2
+                       ${CMAKE_SOURCE_DIR}/ext/nlohmann_json/single_include)
+
 add_library(imgui_sanity_check ${CMAKE_SOURCE_DIR}/ext/imgui/imgui_demo.cpp 
                                ${CMAKE_SOURCE_DIR}/src/core/common.cpp 
                                ${IMGUI_SOURCES})
 
-target_include_directories(imgui_sanity_check PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/ext 
-    ${CMAKE_SOURCE_DIR}/ext/glm
-    ${CMAKE_SOURCE_DIR}/ext/imgui 
-    ${CMAKE_SOURCE_DIR}/ext/imgui/backends
-    ${CMAKE_SOURCE_DIR}/ext/PortaSDL2
-    ${CMAKE_SOURCE_DIR}/ext/nlohmann_json/single_include)
-
+target_include_directories(imgui_sanity_check PRIVATE ${APP_INCLUDE_PATHS})
 target_precompile_headers(imgui_sanity_check PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
 
-target_link_directories(imgui_sanity_check PRIVATE
-    ${CMAKE_SOURCE_DIR}/ext/PortaSDL2/lib)
-
+# Exclude ImGui source files themselves from using PCH
+set_source_files_properties(${IMGUI_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+target_link_directories(imgui_sanity_check PRIVATE ${CMAKE_SOURCE_DIR}/ext/PortaSDL2/lib)
 target_link_libraries(imgui_sanity_check PRIVATE dl GL SDL2 pthread)
 
+add_executable(nobius_app ${CMAKE_SOURCE_DIR}/src/app/main_app.cpp 
+                               ${CORE_BUILD} 
+                               ${IMGUI_SOURCES})
+target_include_directories(nobius_app PRIVATE ${APP_INCLUDE_PATHS})
+target_precompile_headers(nobius_app PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
+
+# Exclude ImGui source files from using PCH
+set_source_files_properties(${IMGUI_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
+target_link_directories(nobius_app PRIVATE ${CMAKE_SOURCE_DIR}/ext/PortaSDL2/lib)
+target_link_libraries(nobius_app PRIVATE dl GL SDL2 pthread)
 

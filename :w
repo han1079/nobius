@@ -16,7 +16,7 @@ public:
     friend class Orchestrator;
 
 private:
-    RendererState& m_cfg;
+    RendererState m_cfg;
 
     // Basic Window Configuration Data
     
@@ -24,11 +24,7 @@ private:
     int win_height;
     SDL_Window* window;
     SDL_GLContext gl_context;
-    float main_scale;
 
-
-    // Stuff for debugging imgui
-    ImGuiStyle style;
 protected:
 
     bool init() override;

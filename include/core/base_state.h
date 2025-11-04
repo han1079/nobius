@@ -29,21 +29,18 @@ class BaseState {
 // - Helper to get a list of all member names and types for iteration / serialization
 
 public:
-    BaseState() = default;
-    ~BaseState() = default;
+    BaseState();
+    BaseState(const std::optional<std::string>& fpath);
+    ~BaseState();
 
-    template <typename member_type>
-    auto get(member_type member_name) -> decltype(this->*member_name) {
-        return this->*member_name;
-    }
-
-    template <typename member_type, typename value_type>
-    void set(member_type member_name, value_type val) {
-        this->*member_name = val; 
-    }
+    
+protected:
+    
+    const std::optional<std::string> file_path = "";
 
 protected:
 
-    nlohmann::json read_json_from_file(const std::string& file_path);
-    virtual void write_json_to_file(const std::string& file_path, const nlohmann::json& j);
+    virtual void load_from_json(const std::optional<std::string>& fpath);
+    virtual void write_json_to_file(const std::string& fpath, const nlohmann::json& j);
 };
+

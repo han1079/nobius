@@ -1,19 +1,20 @@
 #pragma once
+#include <state/mode_state.h>
 #include <core/base_updater.h>
-#include <pch.h>
 #include <core/common.h>
-#include <state/world_state.h>
+#include <pch.h>
 
-class WorldUpdater : public BaseUpdater{
+class ModeUpdater : public BaseUpdater{
 public:
-    WorldUpdater() = delete;
-    WorldUpdater(WorldState& state);
-    ~WorldUpdater() = default;
-    friend class Orchestrator;
 
+    ModeUpdater() = delete;
+    ModeUpdater(ModeState& state); 
+    ~ModeUpdater() = default;
+    friend class Orchestrator;
 private:
-    WorldState& m_world_data;
-    
+
+    ModeState& m_mode_data;
+
 protected:
 
     bool init() override;
@@ -22,4 +23,3 @@ protected:
     bool update_state_via_dT(float dT) override;
 
 };
-
