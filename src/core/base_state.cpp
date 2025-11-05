@@ -1,4 +1,5 @@
 #include <core/base_state.h>
+#include <pch.h>
 
 // Default constructor
 BaseState::BaseState() = default;
@@ -16,6 +17,7 @@ void BaseState::load_from_json(const std::optional<std::string>& fpath) {
 }
 
 void BaseState::write_json_to_file(const std::string& fpath, const nlohmann::json& j) {
-    // Default implementation - can be overridden by derived classes
-    // TODO: Implement base JSON writing logic
+    std::ofstream f(fpath);
+
+    if (f.is_open()) j.dump(4);
 }

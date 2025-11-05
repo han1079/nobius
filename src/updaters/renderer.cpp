@@ -1,11 +1,14 @@
+#include "imgui.h"
 #include <updaters/renderer.h>
 #include <iostream>
+
 
 Renderer::Renderer(RendererState& state) : m_cfg(state) {}
 
 Renderer::~Renderer() {
     // Destructor implementation
 }
+
 bool Renderer::init() {
    
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
@@ -62,17 +65,21 @@ bool Renderer::init() {
     style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
     io.ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
 
+    std::string path = PROJECT_SOURCE_DIR + std::string("/assets/Roboto/static/Roboto-Light.ttf");
+    ImFont* roboto = io.Fonts->AddFontFromFileTTF(path.c_str(), 12);
+    io.FontDefault = roboto;
+
     std::cout << "\r" << &style << std::flush;
     
     io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
     ImGui::StyleColorsDark();
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
+    //if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    //{
+    //    style.WindowRounding = 0.0f;
+    //    style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    //}
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
@@ -130,12 +137,12 @@ void Renderer::build_imgui_frame() {
 
     //ImGui::ShowStyleEditor(&style);
     // Main viewport takes up left 70% of the window
-    ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Main Window", viewport);
-    ImGui::Text("Rendered Content Goes Here");
-    ImGui::Text("Event Count: &d", m_cfg.event_count);
-    ImGui::End();
+    //ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
+    //ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
+    //ImGui::Begin("Main Window", viewport);
+    //ImGui::Text("Rendered Content Goes Here");
+    //ImGui::Text("Event Count: %d", m_cfg.event_count);
+    //ImGui::End();
 
     // Sidebar takes up all of the right side
     // and extends to 30% of the way along the x side on initial layout
@@ -143,6 +150,7 @@ void Renderer::build_imgui_frame() {
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.3, full_window_size.y), ImGuiCond_FirstUseEver);
     ImGui::Begin("Sidebar", sidebar);
     ImGui::Text("Info Panel");
+    ImGui::Text("%s", PROJECT_SOURCE_DIR);
     ImGui::End();
 
     ImGui::SetNextWindowPos(ImVec2(0, full_window_size.y * 0.9), ImGuiCond_FirstUseEver);
@@ -155,6 +163,11 @@ void Renderer::build_imgui_frame() {
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x, full_window_size.y * 0.1), ImGuiCond_FirstUseEver);
     ImGui::Begin("Ribbon", ribbon);
     ImGui::Text("Play | Pause | Stop Buttons Here");
+    ImGui::End();
+    
+    ImGui::Begin("Style", viewport);
+    std::cout << "\r"<< &style << std::flush;
+    ImGui::ShowStyleEditor(&style);
     ImGui::End();
 }
 
@@ -194,18 +207,6 @@ bool Renderer::update_state_via_dT(float dT) {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     
     
-    // Update and Render additional Platform Windows
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        
-        SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
-        SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
-        ImGui::UpdatePlatformWindows();
-        
-        ImGui::RenderPlatformWindowsDefault();
-        SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
-        
-    }
     
     
     SDL_GL_SwapWindow(window);

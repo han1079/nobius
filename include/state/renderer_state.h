@@ -9,10 +9,14 @@ public:
     RendererState() = delete;
     RendererState(const std::optional<std::string>& fpath);
     ~RendererState();
+    
+    void save_imgui_style(const std::string& fpath);
 
 protected:
 
     void load_from_json(const std::optional<std::string>& fpath = std::nullopt) override;
+    void load_sdl_config_from_json(const nlohmann::json& sdl_json);
+    void load_imgui_style_from_json(const nlohmann::json& style_json);
 
 private:
 
@@ -33,8 +37,8 @@ private:
 
     float imgui_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(0);
     ImGuiConfigFlags imgui_config_flags = (ImGuiConfigFlags_NavEnableKeyboard | 
-                                            ImGuiConfigFlags_DockingEnable | 
-                                            ImGuiConfigFlags_ViewportsEnable);
+                                            ImGuiConfigFlags_DockingEnable);
+    //                                        ImGuiConfigFlags_ViewportsEnable);
 
     std::string glsl_version = "#version 130";
     std::string imgui_style = "dark";

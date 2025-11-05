@@ -28,13 +28,13 @@ add_custom_target(build_sdl2
     COMMENT "Building and copying SDL2 to ext/PortaSDL2/"
 )
 
-
 set(IMGUI_SOURCES ${CMAKE_SOURCE_DIR}/ext/imgui/imgui.cpp
                         ${CMAKE_SOURCE_DIR}/ext/imgui/imgui_draw.cpp
                         ${CMAKE_SOURCE_DIR}/ext/imgui/imgui_tables.cpp
                         ${CMAKE_SOURCE_DIR}/ext/imgui/imgui_widgets.cpp
                         ${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_sdl2.cpp
                         ${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_opengl3.cpp
+                        ${CMAKE_SOURCE_DIR}/ext/imgui/imgui_demo.cpp
 )
 
 set(CORE_BUILD ${CMAKE_SOURCE_DIR}/src/core/base_state.cpp
@@ -72,6 +72,7 @@ target_link_libraries(imgui_sanity_check PRIVATE dl GL SDL2 pthread)
 add_executable(nobius_app ${CMAKE_SOURCE_DIR}/src/app/main_app.cpp 
                                ${CORE_BUILD} 
                                ${IMGUI_SOURCES})
+target_compile_definitions(nobius_app PRIVATE -DPROJECT_SOURCE_DIR=\"${CMAKE_SOURCE_DIR}\")
 target_include_directories(nobius_app PRIVATE ${APP_INCLUDE_PATHS})
 target_precompile_headers(nobius_app PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
 

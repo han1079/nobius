@@ -41,6 +41,6 @@ protected:
 protected:
 
     virtual void load_from_json(const std::optional<std::string>& fpath);
-    virtual void write_json_to_file(const std::string& fpath, const nlohmann::json& j);
+    void write_json_to_file(const std::string& fpath, const nlohmann::json& j);
 };
 
