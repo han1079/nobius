@@ -16,6 +16,9 @@ void RendererState::save_imgui_style(const std::string& fpath) {
     nlohmann::json j;
     ImGuiStyle& style = ImGui::GetStyle();
 
+
+    j["config_version"] = 1;
+    j["config_type"] = "imgui_style";
     // Style sizes and spacing
     j["window_padding"] = {style.WindowPadding.x, style.WindowPadding.y};
     j["window_rounding"] = style.WindowRounding;
@@ -88,11 +91,13 @@ void RendererState::load_from_json(const std::optional<std::string>& fpath) {
     nlohmann::json j = nlohmann::json::parse(file);
 
     // Load SDL configuration
-    load_sdl_config_from_json(j);
+    if (j["config_type"] == "sdl_config"){
+        load_sdl_config_from_json(j);
+    }
 
     // Load ImGui style if present
-    if (j.contains("imgui_style_data")) {
-        load_imgui_style_from_json(j["imgui_style_data"]);
+    if (j["config_type"] == "imgui_style"){
+        load_imgui_style_from_json(j);
     }
 }
 
@@ -308,4 +313,4 @@ void RendererState::load_imgui_style_from_json(const nlohmann::json& style_json)
         }
     }
 
-
+}

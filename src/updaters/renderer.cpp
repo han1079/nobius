@@ -2,7 +2,7 @@
 #include <updaters/renderer.h>
 #include <iostream>
 
-
+#define STYLEPATH (PROJECT_SOURCE_DIR + std::string("/configs/imgui_style.json")).c_str()
 Renderer::Renderer(RendererState& state) : m_cfg(state) {}
 
 Renderer::~Renderer() {
@@ -58,6 +58,7 @@ bool Renderer::init() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= m_cfg.imgui_config_flags;
+    m_cfg.load_from_json(std::string(STYLEPATH));
 
     // Setup scaling
     style = ImGui::GetStyle();
@@ -151,6 +152,9 @@ void Renderer::build_imgui_frame() {
     ImGui::Begin("Sidebar", sidebar);
     ImGui::Text("Info Panel");
     ImGui::Text("%s", PROJECT_SOURCE_DIR);
+    if (ImGui::Button("Save Style")) {
+        m_cfg.save_imgui_style(STYLEPATH);
+    }
     ImGui::End();
 
     ImGui::SetNextWindowPos(ImVec2(0, full_window_size.y * 0.9), ImGuiCond_FirstUseEver);
