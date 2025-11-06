@@ -46,8 +46,8 @@ set(CORE_BUILD ${CMAKE_SOURCE_DIR}/src/core/base_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/state/world_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/mode_updater.cpp
                 ${CMAKE_SOURCE_DIR}/src/state/mode_state.cpp
-                ${CMAKE_SOURCE_DIR}/src/updaters/renderer.cpp
-                ${CMAKE_SOURCE_DIR}/src/state/renderer_state.cpp)
+                ${CMAKE_SOURCE_DIR}/src/updaters/imgui_updater.cpp
+                ${CMAKE_SOURCE_DIR}/src/state/imgui_state.cpp)
 
 set(APP_INCLUDE_PATHS ${CMAKE_SOURCE_DIR}/include
                        ${CMAKE_SOURCE_DIR}/ext 

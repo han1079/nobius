@@ -4,6 +4,17 @@
 
 #define ORCH() Orchestrator::get()
 
+#define ASSERT(x) if (!(x)) __builtin_debugtrap();
+
+
+#define GLCall(x) GLClearError();\
+x;\
+ASSERT(GLLogCall(#x, __FILE__, __LINE__))
+
+
+void GLLogCall(const char* function, const char* file, int line);
+void GLClearError();
+
 enum USER_MODES {
     MODE_SELECT = (1 << 0), // Select Mode. Objects hover, and can be clicked on
     MODE_DRAG = (1 << 1), // Drag Mode. Entity is currently being selected and edited
@@ -18,7 +29,7 @@ enum USER_MODES {
 struct LoadSpec {
     std::optional<std::string> world_state_spec = std::nullopt;
     std::optional<std::string> mode_state_spec = std::nullopt;
-    std::optional<std::string> renderer_state_spec = std::nullopt;
+    std::optional<std::string> imgui_state_spec = std::nullopt;
 };
 
 inline const std::unordered_map<std::string, SDL_WindowFlags> sdl_window_flag_lookup = {

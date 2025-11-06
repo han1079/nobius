@@ -1,14 +1,13 @@
+#include <state/imgui_state.h>
 
-#include <state/renderer_state.h>
-
-RendererState::RendererState(const std::optional<std::string>& fpath) : BaseState(fpath) {
+ImGuiState::ImGuiState(const std::optional<std::string>& fpath) : BaseState(fpath) {
     load_from_json(fpath);
 } 
 
 // Destructor implementation
-RendererState::~RendererState() = default;
+ImGuiState::~ImGuiState() = default;
 
-void RendererState::save_imgui_style(const std::string& fpath) {
+void ImGuiState::save_imgui_style(const std::string& fpath) {
     if (fpath.empty()) {
         return;
     }
@@ -82,7 +81,7 @@ void RendererState::save_imgui_style(const std::string& fpath) {
     file.close();
 }
 
-void RendererState::load_from_json(const std::optional<std::string>& fpath) {
+void ImGuiState::load_from_json(const std::optional<std::string>& fpath) {
     if (!fpath || fpath->empty()) {
         return;
     }
@@ -101,7 +100,7 @@ void RendererState::load_from_json(const std::optional<std::string>& fpath) {
     }
 }
 
-void RendererState::load_sdl_config_from_json(const nlohmann::json& sdl_json) {
+void ImGuiState::load_sdl_config_from_json(const nlohmann::json& sdl_json) {
     // Check for compatibility/version if needed
     if (sdl_json.contains("config_version")) {
         // You can add version checking logic here
@@ -170,7 +169,7 @@ void RendererState::load_sdl_config_from_json(const nlohmann::json& sdl_json) {
     }
 }
 
-void RendererState::load_imgui_style_from_json(const nlohmann::json& style_json) {
+void ImGuiState::load_imgui_style_from_json(const nlohmann::json& style_json) {
     ImGuiStyle& style = ImGui::GetStyle();
     
     // Load style sizes and spacing

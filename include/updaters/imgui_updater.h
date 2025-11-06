@@ -3,20 +3,20 @@
 #include <pch.h>
 #include <core/common.h>
 #include <core/base_updater.h>
-#include <state/renderer_state.h>
+#include <state/imgui_state.h>
 
 
-class Renderer : public BaseUpdater {
+class ImGuiUpdater : public BaseUpdater {
 public:
 
     
-    Renderer() = delete; // Renderer MUST have a state in order to be created.
-    Renderer(RendererState& state);
-    ~Renderer();
+    ImGuiUpdater() = delete; // ImGuiUpdater MUST have a state in order to be created.
+    ImGuiUpdater(ImGuiState& state);
+    ~ImGuiUpdater();
     friend class Orchestrator;
 
 private:
-    RendererState& m_cfg;
+    ImGuiState& m_cfg;
 
     // Basic Window Configuration Data
     

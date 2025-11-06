@@ -4,11 +4,11 @@
 #include <core/base_state.h>
 
 
-class RendererState : public BaseState {
+class ImGuiState : public BaseState {
 public:
-    RendererState() = delete;
-    RendererState(const std::optional<std::string>& fpath);
-    ~RendererState();
+    ImGuiState() = delete;
+    ImGuiState(const std::optional<std::string>& fpath);
+    ~ImGuiState();
     
     void save_imgui_style(const std::string& fpath);
 
@@ -50,7 +50,7 @@ private:
     bool ribbon_visible = true;
     bool viewport_visible = true;
 
-    friend class Renderer;
+    friend class ImGuiUpdater;
     friend class Orchestrator;
 
 private:

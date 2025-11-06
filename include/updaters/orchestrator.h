@@ -3,13 +3,13 @@
 #include <pch.h>
 #include <core/common.h>
 
-#include <state/renderer_state.h>
+#include <state/imgui_state.h>
 #include <state/mode_state.h>
 #include <state/world_state.h>
 
 #include <updaters/mode_updater.h>
 #include <updaters/world_updater.h>
-#include <updaters/renderer.h>
+#include <updaters/imgui_updater.h>
 
 
 
@@ -30,6 +30,7 @@ public:
 
     void init();
     void run();
+    void sig_exit_loop();
     void shutdown();
 private:
 
@@ -43,24 +44,24 @@ private:
      *
      * ModeState - Bulk Modes (Edit Modes, window minimized, pause/run, etc)
      * WorldState - Entities, Scene Data, dT steps
-     * RendererState - Window configuration, shader code strings, etc
+     * ImGuiState - Window configuration, shader code strings, etc
      *
      * */
 
     ModeState m_mode_state;
     WorldState m_world_state;
-    RendererState m_renderer_state;
+    ImGuiState m_imgui_state;
 
     /*The Orchestrator owns the following control objects:
      * 
      * ModeUpdater
      * WorldUpdater
-     * Renderer
+     * ImGuiUpdater
      * 
      * */
     ModeUpdater m_mode_updater;
     WorldUpdater m_world_updater;
-    Renderer m_renderer;
+    ImGuiUpdater m_imgui_updater;
 
 };
 

@@ -6,10 +6,10 @@
 Orchestrator::Orchestrator(const LoadSpec& load_spec):
         m_mode_state(load_spec.mode_state_spec),
         m_world_state(load_spec.world_state_spec),
-        m_renderer_state(load_spec.renderer_state_spec),
+        m_imgui_state(load_spec.imgui_state_spec),
         m_mode_updater(m_mode_state),
         m_world_updater(m_world_state),
-        m_renderer(m_renderer_state) {
+        m_imgui_updater(m_imgui_state) {
         m_orchestrator_ptr = this;
     }
 
@@ -20,11 +20,15 @@ void Orchestrator::init(){
     // Recursive Init
     m_mode_updater.init();
     m_world_updater.init();
-    m_renderer.init();
+    m_imgui_updater.init();
 }
 
 Orchestrator* Orchestrator::get(){
     return m_orchestrator_ptr;
+}
+
+void Orchestrator::sig_exit_loop() {
+    m_running = false;
 }
 
 void Orchestrator::run() {
@@ -62,14 +66,14 @@ void Orchestrator::run() {
              * WorldUpdater:  Direct entity update, placement, etc based on
              *                local state and captured event input
              *
-             * Renderer:      Bulk renderer configuration update (shader modes, themes)
+             * ImGuiUpdater:  Bulk renderer configuration update (shader modes, themes)
              * */
             m_mode_updater.update_state_via_event(event);
             m_world_updater.update_state_via_event(event);
-            m_renderer.update_state_via_event(event);
+            m_imgui_updater.update_state_via_event(event);
         }
 
-        m_renderer_state.set(&RendererState::event_count, event_ct);
+        m_imgui_state.set(&ImGuiState::event_count, event_ct);
 
         
 
@@ -79,7 +83,7 @@ void Orchestrator::run() {
          *
          * WorldUpdate:   All entity motion interpolation
          *
-         * Renderer:      Runs the renderer pipeline submit
+         * ImGuiUpdater:  Runs the renderer pipeline submit
          * 
          * */
         
@@ -88,7 +92,7 @@ void Orchestrator::run() {
         
         m_world_updater.update_state_via_dT(dT);
         
-        m_renderer.update_state_via_dT(dT);
+        m_imgui_updater.update_state_via_dT(dT);
         
         
         auto frame_end = clock::now();
@@ -104,7 +108,7 @@ void Orchestrator::shutdown() {
     /*Shutoff sequence*/
     m_mode_updater.shutdown();
     m_world_updater.shutdown();
-    m_renderer.shutdown();
+    m_imgui_updater.shutdown();
 }
 
 

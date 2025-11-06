@@ -1,15 +1,15 @@
 #include "imgui.h"
-#include <updaters/renderer.h>
+#include <updaters/imgui_updater.h>
 #include <iostream>
 
-#define STYLEPATH (PROJECT_SOURCE_DIR + std::string("/configs/imgui_style.json")).c_str()
-Renderer::Renderer(RendererState& state) : m_cfg(state) {}
+#define STYLEPATH (PROJECT_SOURCE_DIR + std::string("/configs/imgui_style_default.json")).c_str()
+ImGuiUpdater::ImGuiUpdater(ImGuiState& state) : m_cfg(state) {}
 
-Renderer::~Renderer() {
+ImGuiUpdater::~ImGuiUpdater() {
     // Destructor implementation
 }
 
-bool Renderer::init() {
+bool ImGuiUpdater::init() {
    
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
     {
@@ -58,7 +58,7 @@ bool Renderer::init() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= m_cfg.imgui_config_flags;
-    m_cfg.load_from_json(std::string(STYLEPATH));
+    // m_cfg.load_from_json(std::string(STYLEPATH));
 
     // Setup scaling
     style = ImGui::GetStyle();
@@ -89,12 +89,12 @@ bool Renderer::init() {
     return true;
 }
 
-bool Renderer::update_state_via_event(SDL_Event &event) {
-    // Renderer state itself doesn't do major updates on event
+bool ImGuiUpdater::update_state_via_event(SDL_Event &event) {
+    // ImGuiUpdater state itself doesn't do major updates on event
     return true;
 }
 
-void Renderer::build_imgui_frame() {
+void ImGuiUpdater::build_imgui_frame() {
     /* Build the ImGui frame
 
     Bottom Row -> Slider for Timeline 
@@ -175,7 +175,7 @@ void Renderer::build_imgui_frame() {
     ImGui::End();
 }
 
-bool Renderer::update_state_via_dT(float dT) {
+bool ImGuiUpdater::update_state_via_dT(float dT) {
     static int frame_count = 0;
     frame_count++;
     
@@ -190,15 +190,12 @@ bool Renderer::update_state_via_dT(float dT) {
         SDL_Delay(10);
         return true;
     }
-
     
     build_imgui_frame();
     
     
-    
     ImGuiIO& io = ImGui::GetIO();
     ImGui::Render();
-    
     
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
     glClearColor(m_cfg.gl_clear_color.r * m_cfg.gl_clear_color.a, 
@@ -207,19 +204,15 @@ bool Renderer::update_state_via_dT(float dT) {
                  m_cfg.gl_clear_color.a);
     glClear(GL_COLOR_BUFFER_BIT);
     
-    
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     
-    
-    
-    
     SDL_GL_SwapWindow(window);
-    
+ 
     
     return true;
 }
 
-bool Renderer::shutdown() {
+bool ImGuiUpdater::shutdown() {
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
