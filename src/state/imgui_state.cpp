@@ -7,6 +7,13 @@ ImGuiState::ImGuiState(const std::optional<std::string>& fpath) : BaseState(fpat
 // Destructor implementation
 ImGuiState::~ImGuiState() = default;
 
+void ImGuiState::update_viewport_info(float x_pos, float y_pos, float width, float height) {
+    canvas_height = height;
+    canvas_width = width;
+    canvas_x_pos = x_pos;
+    canvas_y_pos = y_pos;
+}
+
 void ImGuiState::save_imgui_style(const std::string& fpath) {
     if (fpath.empty()) {
         return;

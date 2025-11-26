@@ -33,10 +33,12 @@ protected:
 
     bool init() override;
     bool shutdown() override;
-    bool update_state_via_event(SDL_Event &event) override;
+    bool update_state_via_event(EngineEvent &event) override;
     bool update_state_via_dT(float dT) override;
 
 private:
 
     void build_imgui_frame();
+    bool draw_gui();
+    EngineEvent ingest_SDL_event(SDL_Event& event);
 };

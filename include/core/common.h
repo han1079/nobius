@@ -15,6 +15,61 @@ ASSERT(GLLogCall(#x, __FILE__, __LINE__))
 void GLLogCall(const char* function, const char* file, int line);
 void GLClearError();
 
+
+enum DebugLevel { TRACE, INFO, WARN, ERROR, FATAL};
+
+class Debug {
+    public:
+    Debug() = delete;
+    ~Debug() = delete;
+    static void log(const std::string& msg, DebugLevel level = DebugLevel::INFO) {
+        switch (level) {
+            case TRACE:
+                std::cout << "[TRACE]: " << msg << std::endl;
+                break;
+            case INFO:
+                std::cout << "[INFO]: " << msg << std::endl;
+                break;
+            case WARN:
+                std::cout << "[WARN]: " << msg << std::endl;
+                break;
+            case ERROR:
+                std::cout << "[ERROR]: " << msg << std::endl;
+                break;
+            case FATAL:
+                std::cout << "[FATAL]: " << msg << std::endl;
+                abort();
+                break;
+        }
+    }
+};
+// Grow this list of events to include events that I actually care 
+// about from the perspective of non-ImGui state update interactions 
+// This is mostly user input stuff that draws stuff, like mouse 
+// movements and keyboard inputs. I will ignore all sorts 
+// of window stuff here.
+enum class EngineEventType {
+    None,
+    MouseMove,
+    MouseButtonDown,
+    MouseButtonUp,
+    MouseWheel,
+    KeyDown,
+    KeyUp,
+};
+
+struct EngineEvent {
+    EngineEventType type = EngineEventType::None;
+
+    int mouse_x = 0;
+    int mouse_y = 0;
+    int mouse_button = 0;
+    int wheel_dy = 0;
+    bool wheel_direction_up = false;
+    
+    SDL_Keysym key_info = {};
+};
+
 enum USER_MODES {
     MODE_SELECT = (1 << 0), // Select Mode. Objects hover, and can be clicked on
     MODE_DRAG = (1 << 1), // Drag Mode. Entity is currently being selected and edited

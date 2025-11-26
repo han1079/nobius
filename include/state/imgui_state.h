@@ -52,6 +52,12 @@ private:
 
     friend class ImGuiUpdater;
     friend class Orchestrator;
+    friend class Renderer;
+
+    float canvas_x_pos = 0.0f;
+    float canvas_y_pos = 0.0f;
+    float canvas_width = 800.0f;
+    float canvas_height = 600.0f;
 
 private:
 
@@ -67,5 +73,6 @@ private:
         (this)->*member_name = val; 
     }
 
+    void update_viewport_info(float x_pos, float y_pos, float width, float height);
 
 };

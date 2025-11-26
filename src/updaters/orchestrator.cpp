@@ -36,7 +36,8 @@ void Orchestrator::run() {
     using clock = std::chrono::steady_clock;
     auto last_time = clock::now();
     auto last_frame_start = clock::now();
-    SDL_Event event;
+    SDL_Event sdl_event;
+    EngineEvent event;
     int frame_count = 0;
     int event_ct = 0;
     while (m_running) {
@@ -48,12 +49,10 @@ void Orchestrator::run() {
         last_time = current_time;
         float dT = delta.count();
         // Process ALL pending events, not just one
-        while (SDL_PollEvent(&event)) {
+        while (SDL_PollEvent(&sdl_event)) {
             
             event_ct++;
-            if (event.type != 0) {  // Only log non-empty events
-                
-            }
+            event = m_imgui_updater.ingest_SDL_event(&sdl_event);
             
             /* Take latest input event, and update state:
              *
@@ -98,10 +97,12 @@ void Orchestrator::run() {
         auto frame_end = clock::now();
         auto frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - last_frame_start);
         if (frame_duration.count() > 100) { // Warn if frame takes more than 100ms
-            
+            Debug::log("Warning: Frame took " + std::to_string(frame_duration.count()) + " ms", DebugLevel::WARN);
         }
     }
 }
+
+
 
 void Orchestrator::shutdown() {
     m_running = false;

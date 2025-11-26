@@ -1,8 +1,12 @@
+#include "SDL_events.h"
+#include "core/common.h"
 #include "imgui.h"
 #include <updaters/imgui_updater.h>
 #include <iostream>
+#include <updaters/orchestrator.h>
 
 #define STYLEPATH (PROJECT_SOURCE_DIR + std::string("/configs/imgui_style_default.json")).c_str()
+
 ImGuiUpdater::ImGuiUpdater(ImGuiState& state) : m_cfg(state) {}
 
 ImGuiUpdater::~ImGuiUpdater() {
@@ -89,7 +93,7 @@ bool ImGuiUpdater::init() {
     return true;
 }
 
-bool ImGuiUpdater::update_state_via_event(SDL_Event &event) {
+bool ImGuiUpdater::update_state_via_event(EngineEvent &event) {
     // ImGuiUpdater state itself doesn't do major updates on event
     return true;
 }
@@ -136,14 +140,15 @@ void ImGuiUpdater::build_imgui_frame() {
     
     */
 
-    //ImGui::ShowStyleEditor(&style);
     // Main viewport takes up left 70% of the window
-    //ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
-    //ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
-    //ImGui::Begin("Main Window", viewport);
-    //ImGui::Text("Rendered Content Goes Here");
-    //ImGui::Text("Event Count: %d", m_cfg.event_count);
-    //ImGui::End();
+    ImGui::ShowStyleEditor(&style);
+    ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Main Window", viewport);
+    ImVec2 pos = ImGui::GetWindowPos();
+    ImVec2 size = ImGui::GetWindowSize();
+    m_cfg.update_viewport_info(pos.x, pos.y, size.x, size.y);
+    ImGui::End();
 
     // Sidebar takes up all of the right side
     // and extends to 30% of the way along the x side on initial layout
@@ -155,6 +160,7 @@ void ImGuiUpdater::build_imgui_frame() {
     if (ImGui::Button("Save Style")) {
         m_cfg.save_imgui_style(STYLEPATH);
     }
+    ImGui::Text("Event Count: %d", m_cfg.event_count);
     ImGui::End();
 
     ImGui::SetNextWindowPos(ImVec2(0, full_window_size.y * 0.9), ImGuiCond_FirstUseEver);
@@ -176,6 +182,45 @@ void ImGuiUpdater::build_imgui_frame() {
 }
 
 bool ImGuiUpdater::update_state_via_dT(float dT) {
+    // Currently no returns.
+    return true;
+}
+
+EngineEvent ImGuiUpdater::ingest_SDL_event(SDL_Event& event) {
+    EngineEvent engine_event;
+    engine_event.type = EngineEventType::None;
+
+    ImGui_ImplSDL2_ProcessEvent(&event);
+    if (event.type == SDL_QUIT){
+        ORCH()->sig_exit_loop();
+        return engine_event;
+    }
+    else if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE){}
+        ORCH()->sig_exit_loop();
+        return engine_event;
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    
+    switch(event.type) {
+    case(SDL_MOUSEBUTTONDOWN) :
+        engine_event.type = EngineEventType::MouseButtonDown;
+    case(SDL_MOUSEBUTTONUP) :
+        engine_event.type = EngineEventType::MouseButtonUp;
+    case(SDL_MOUSEMOTION) :
+        engine_event.type = EngineEventType::MouseMove;
+    case(SDL_MOUSE_WHEEL) :
+        engine_event.type = EngineEventType::MouseWheel;
+    case(SDL_KEYDOWN) :
+        engine_event.type = EngineEventType::KeyDown;
+    case(SDL_KEYUP) :
+        engine_event.type = EngineEventType::KeyUp;
+    }
+
+}
+
+bool ImGuiUpdater::draw_gui() {
+
     static int frame_count = 0;
     frame_count++;
     
@@ -205,10 +250,6 @@ bool ImGuiUpdater::update_state_via_dT(float dT) {
     glClear(GL_COLOR_BUFFER_BIT);
     
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    
-    SDL_GL_SwapWindow(window);
- 
-    
     return true;
 }
 

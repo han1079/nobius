@@ -1,3 +1,4 @@
+#include <glad/glad.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <imgui_impl_sdl2.h>
@@ -6,3 +7,4 @@
 #include <glm/glm.hpp>
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <iostream>

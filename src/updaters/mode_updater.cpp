@@ -11,12 +11,7 @@ bool ModeUpdater::shutdown() {
     return true;
 }
 
-bool ModeUpdater::update_state_via_event(SDL_Event &event) {
-    ImGui_ImplSDL2_ProcessEvent(&event);
-    if (event.type == SDL_QUIT)
-        ORCH()->sig_exit_loop();
-    else if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE)
-        ORCH()->sig_exit_loop();
+bool ModeUpdater::update_state_via_event(EngineEvent &event) {
     return true;
 }
 

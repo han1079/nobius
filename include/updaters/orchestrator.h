@@ -32,6 +32,12 @@ public:
     void run();
     void sig_exit_loop();
     void shutdown();
+    
+    // Getter methods
+    const ImGuiState& get_imgui_state() const { return m_imgui_state; }
+    const ModeState& get_mode_state() const { return m_mode_state; }
+    const WorldState& get_world_state() const { return m_world_state; }
+    
 private:
 
     bool m_running = true;
@@ -63,5 +69,6 @@ private:
     WorldUpdater m_world_updater;
     ImGuiUpdater m_imgui_updater;
 
+    friend class Renderer;
 };
 

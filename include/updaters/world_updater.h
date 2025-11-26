@@ -3,6 +3,7 @@
 #include <pch.h>
 #include <core/common.h>
 #include <state/world_state.h>
+#include <random>
 
 class WorldUpdater : public BaseUpdater{
 public:
@@ -18,8 +19,9 @@ protected:
 
     bool init() override;
     bool shutdown() override;
-    bool update_state_via_event(SDL_Event &event) override;
+    bool update_state_via_event(EngineEvent &event) override;
     bool update_state_via_dT(float dT) override;
+    uint64_t generate_uuid();
 
 };
 
