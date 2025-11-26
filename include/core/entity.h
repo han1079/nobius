@@ -57,17 +57,10 @@ private:
     unsigned int vertex_count;
     std::vector<RichVertex> vertex_data;
 
-    std::unordered_map<int, int> vertex_to_heap_index_map;
-    std::unordered_map<int, int> heap_to_vertex_index_map;
-
     const uint64_t& UUID;
  
     friend class Renderer;
     friend class Entity;
-private:
-    void generate_mappings(){
-
-    }
 };
 
 struct BufferRequest; //Forward Decclaration. TODO: Move this into a proper header.

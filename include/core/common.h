@@ -2,18 +2,56 @@
 
 #include <pch.h>
 
+
+/*  CMake should give the exact path to source, but this
+    acts as a stopgap in weird cases / for LSPs to no freak out.
+    build/ should be one stop above source regardless in my structure.
+ */
+#ifndef PROJECT_SOURCE_DIR
+#define PROJECT_SOURCE_DIR "../"
+#endif
+
 #define ORCH() Orchestrator::get()
 
-#define ASSERT(x) if (!(x)) __builtin_debugtrap();
+// Portable debug break macro
+#if defined(_MSC_VER)
+    #define DEBUG_BREAK() __debugbreak()
+#elif defined(__clang__)
+    #define DEBUG_BREAK() __builtin_debugtrap()
+#elif defined(__GNUC__)
+    #define DEBUG_BREAK() __builtin_trap()
+#else
+    #include <signal.h>
+    #define DEBUG_BREAK() raise(SIGTRAP)
+#endif
+
+#ifdef DEBUG
+    #define DEBUG_LOG(msg) Debug::log(msg, DebugLevel::TRACE)
+    #define DEBUG_VAR(var) Debug::log(#var " = " + std::to_string(var), DebugLevel::TRACE)
+#else
+    #define DEBUG_LOG(msg)
+    #define DEBUG_VAR(var)
+#endif
+
+#define ASSERT(x) if (!(x)) DEBUG_BREAK();
 
 
 #define GLCall(x) GLClearError();\
 x;\
 ASSERT(GLLogCall(#x, __FILE__, __LINE__))
 
+inline bool GLLogCall(const char* function, const char* file, int line) {
+    while (GLenum error = glGetError()) {
+        std::cout << "[OpenGL Error] (" << error << "): " << function <<
+            " " << file << ":" << line << std::endl;
+        return false;
+    }
+    return true;
+}
 
-void GLLogCall(const char* function, const char* file, int line);
-void GLClearError();
+inline void GLClearError() {
+    while (glGetError() != GL_NO_ERROR);
+}
 
 
 enum DebugLevel { TRACE, INFO, WARN, ERROR, FATAL};
@@ -50,6 +88,8 @@ class Debug {
 // of window stuff here.
 enum class EngineEventType {
     None,
+    Captured,
+    Quit,
     MouseMove,
     MouseButtonDown,
     MouseButtonUp,
@@ -78,7 +118,7 @@ enum USER_MODES {
     MODE_DELETE = (1 << 4), // Delete Mode. Entities can be clicked to delete.
     MODE_INACTIVE = (1 << 5), // No Viewport Interaction Logic apart from "Reactivate"
     MODE_UIFOCUS = (1 << 6), // UI is being interacted with - runs off ImGui IO flag
-    MODE_CLOSE_REQUESTED = (1 << 7) // Application close has been requested
+    MODE_CLOSE_REQUESTED = 0 // Application close has been requested
 };
 
 struct LoadSpec {
@@ -201,7 +241,9 @@ inline std::string string_from_flag(const std::unordered_map<std::string, flag_t
 class Orchestrator;
 class Renderer;
 class WorldUpdater;
-class StateUpdater;
+class EventIngester;
+class ImGuiUpdater;
+class ModeUpdater;
 class WorldState;
 class SystemState;
 class WindowState;

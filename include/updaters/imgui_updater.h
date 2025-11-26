@@ -39,6 +39,6 @@ protected:
 private:
 
     void build_imgui_frame();
+    void initialize_imgui_frame();
     bool draw_gui();
-    EngineEvent ingest_SDL_event(SDL_Event& event);
 };

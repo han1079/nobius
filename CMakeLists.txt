@@ -5,6 +5,20 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Debug configuration for GDB
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
+    set(CMAKE_C_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
+    message(STATUS "Building in Debug mode for GDB")
+else()
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+    set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG")
+endif()
+
 set(EXT_SDL_SUBMODULE_PATH ${CMAKE_SOURCE_DIR}/ext/SDL)
 
 add_custom_target(build_sdl2
@@ -47,7 +61,9 @@ set(CORE_BUILD ${CMAKE_SOURCE_DIR}/src/core/base_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/mode_updater.cpp
                 ${CMAKE_SOURCE_DIR}/src/state/mode_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/imgui_updater.cpp
-                ${CMAKE_SOURCE_DIR}/src/state/imgui_state.cpp)
+                ${CMAKE_SOURCE_DIR}/src/state/imgui_state.cpp
+                ${CMAKE_SOURCE_DIR}/src/updaters/event_ingester.cpp
+                ${CMAKE_SOURCE_DIR}/src/core/renderer.cpp)
 
 set(APP_INCLUDE_PATHS ${CMAKE_SOURCE_DIR}/include
                        ${CMAKE_SOURCE_DIR}/ext 
@@ -91,15 +107,15 @@ set_source_files_properties(${IMGUI_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS 
 target_link_directories(nobius_app PRIVATE ${CMAKE_SOURCE_DIR}/ext/PortaSDL2/lib)
 target_link_libraries(nobius_app PRIVATE glad dl GL SDL2 pthread)
 
-add_executable(renderer_test ${CMAKE_SOURCE_DIR}/src/app/renderer_test.cpp
-                            ${CMAKE_SOURCE_DIR}/src/core/common.cpp
-                            ${CMAKE_SOURCE_DIR}/src/core/renderer.cpp
-                            ${CMAKE_SOURCE_DIR}/src/core/entity.cpp
-                            ${VENDOR_SOURCES})
+# add_executable(renderer_test ${CMAKE_SOURCE_DIR}/src/app/renderer_test.cpp
+#                             ${CMAKE_SOURCE_DIR}/src/core/common.cpp
+#                             ${CMAKE_SOURCE_DIR}/src/core/renderer.cpp
+#                             ${CMAKE_SOURCE_DIR}/src/core/entity.cpp
+#                             ${VENDOR_SOURCES})
 
 
-target_include_directories(renderer_test PRIVATE ${APP_INCLUDE_PATHS})
-target_precompile_headers(renderer_test PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
-target_link_directories(renderer_test PRIVATE ${CMAKE_SOURCE_DIR}/ext/PortaSDL2/lib)
-target_link_libraries(renderer_test PRIVATE glad dl GL SDL2 pthread)
+# target_include_directories(renderer_test PRIVATE ${APP_INCLUDE_PATHS})
+# target_precompile_headers(renderer_test PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
+# target_link_directories(renderer_test PRIVATE ${CMAKE_SOURCE_DIR}/ext/PortaSDL2/lib)
+# target_link_libraries(renderer_test PRIVATE glad dl GL SDL2 pthread)
 

@@ -10,6 +10,9 @@
 #include <updaters/mode_updater.h>
 #include <updaters/world_updater.h>
 #include <updaters/imgui_updater.h>
+#include <updaters/event_ingester.h>
+
+#include <core/renderer.h>
 
 
 
@@ -37,6 +40,7 @@ public:
     const ImGuiState& get_imgui_state() const { return m_imgui_state; }
     const ModeState& get_mode_state() const { return m_mode_state; }
     const WorldState& get_world_state() const { return m_world_state; }
+    const UIState& get_ui_state() const { return m_ui_state; }
     
 private:
 
@@ -48,12 +52,14 @@ private:
 
     /*The Orchestrator owns the following state trackers
      *
+     * UIState - UI Interaction States (hovered elements, mouse pos, key states)
      * ModeState - Bulk Modes (Edit Modes, window minimized, pause/run, etc)
      * WorldState - Entities, Scene Data, dT steps
      * ImGuiState - Window configuration, shader code strings, etc
      *
      * */
 
+    UIState m_ui_state;
     ModeState m_mode_state;
     WorldState m_world_state;
     ImGuiState m_imgui_state;
@@ -63,12 +69,15 @@ private:
      * ModeUpdater
      * WorldUpdater
      * ImGuiUpdater
+     * EventIngester
      * 
      * */
+    EventIngester m_event_ingester;
     ModeUpdater m_mode_updater;
     WorldUpdater m_world_updater;
     ImGuiUpdater m_imgui_updater;
 
+    Renderer m_renderer;
     friend class Renderer;
 };
 

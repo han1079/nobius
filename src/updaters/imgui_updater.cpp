@@ -2,6 +2,7 @@
 #include "core/common.h"
 #include "imgui.h"
 #include <updaters/imgui_updater.h>
+#include <state/mode_state.h>
 #include <iostream>
 #include <updaters/orchestrator.h>
 
@@ -90,11 +91,16 @@ bool ImGuiUpdater::init() {
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init(m_cfg.glsl_version.c_str());
 
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
     return true;
 }
 
 bool ImGuiUpdater::update_state_via_event(EngineEvent &event) {
-    // ImGuiUpdater state itself doesn't do major updates on event
+    // ImGuiUpdater no longer handles event ingestion - this is now handled by EventIngester
+    // This method can be used for ImGui-specific event responses (theme changes, etc.)
     return true;
 }
 
@@ -141,7 +147,8 @@ void ImGuiUpdater::build_imgui_frame() {
     */
 
     // Main viewport takes up left 70% of the window
-    ImGui::ShowStyleEditor(&style);
+    //ImGui::ShowStyleEditor(&style);
+
     ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
     ImGui::Begin("Main Window", viewport);
@@ -186,39 +193,6 @@ bool ImGuiUpdater::update_state_via_dT(float dT) {
     return true;
 }
 
-EngineEvent ImGuiUpdater::ingest_SDL_event(SDL_Event& event) {
-    EngineEvent engine_event;
-    engine_event.type = EngineEventType::None;
-
-    ImGui_ImplSDL2_ProcessEvent(&event);
-    if (event.type == SDL_QUIT){
-        ORCH()->sig_exit_loop();
-        return engine_event;
-    }
-    else if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE){}
-        ORCH()->sig_exit_loop();
-        return engine_event;
-    }
-
-    ImGuiIO& io = ImGui::GetIO();
-    
-    switch(event.type) {
-    case(SDL_MOUSEBUTTONDOWN) :
-        engine_event.type = EngineEventType::MouseButtonDown;
-    case(SDL_MOUSEBUTTONUP) :
-        engine_event.type = EngineEventType::MouseButtonUp;
-    case(SDL_MOUSEMOTION) :
-        engine_event.type = EngineEventType::MouseMove;
-    case(SDL_MOUSE_WHEEL) :
-        engine_event.type = EngineEventType::MouseWheel;
-    case(SDL_KEYDOWN) :
-        engine_event.type = EngineEventType::KeyDown;
-    case(SDL_KEYUP) :
-        engine_event.type = EngineEventType::KeyUp;
-    }
-
-}
-
 bool ImGuiUpdater::draw_gui() {
 
     static int frame_count = 0;
@@ -231,7 +205,6 @@ bool ImGuiUpdater::draw_gui() {
     
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
     {
-        
         SDL_Delay(10);
         return true;
     }

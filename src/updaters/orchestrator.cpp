@@ -7,6 +7,8 @@ Orchestrator::Orchestrator(const LoadSpec& load_spec):
         m_mode_state(load_spec.mode_state_spec),
         m_world_state(load_spec.world_state_spec),
         m_imgui_state(load_spec.imgui_state_spec),
+        m_ui_state(),
+        m_event_ingester(m_ui_state),
         m_mode_updater(m_mode_state),
         m_world_updater(m_world_state),
         m_imgui_updater(m_imgui_state) {
@@ -21,6 +23,13 @@ void Orchestrator::init(){
     m_mode_updater.init();
     m_world_updater.init();
     m_imgui_updater.init();
+    
+    // Initialize renderer with GLAD - this must happen after SDL context creation
+    if (!m_renderer.init()) {
+        Debug::log("Failed to initialize renderer (GLAD initialization failed)", DebugLevel::FATAL);
+        m_running = false;
+        return;
+    }
 }
 
 Orchestrator* Orchestrator::get(){
@@ -36,23 +45,34 @@ void Orchestrator::run() {
     using clock = std::chrono::steady_clock;
     auto last_time = clock::now();
     auto last_frame_start = clock::now();
+    auto current_time = clock::now();
+
     SDL_Event sdl_event;
     EngineEvent event;
     int frame_count = 0;
-    int event_ct = 0;
+    int total_event_ct = 0;
+    int loop_event_ct = 0;
     while (m_running) {
+
+        
+
         frame_count++;
         last_frame_start = clock::now();
         
-        auto current_time = clock::now();
+        current_time = clock::now();
         std::chrono::duration<float> delta = current_time - last_time;
         last_time = current_time;
         float dT = delta.count();
+
+        m_event_ingester.update_time(current_time.time_since_epoch().count());
+
         // Process ALL pending events, not just one
         while (SDL_PollEvent(&sdl_event)) {
+            total_event_ct++; 
+            loop_event_ct++;
+
+            event = m_event_ingester.ingest_event(sdl_event);
             
-            event_ct++;
-            event = m_imgui_updater.ingest_SDL_event(&sdl_event);
             
             /* Take latest input event, and update state:
              *
@@ -72,7 +92,10 @@ void Orchestrator::run() {
             m_imgui_updater.update_state_via_event(event);
         }
 
-        m_imgui_state.set(&ImGuiState::event_count, event_ct);
+        m_event_ingester.reset_changes();
+        loop_event_ct = 0;
+
+        m_imgui_state.set(&ImGuiState::event_count, total_event_ct);
 
         
 
@@ -92,12 +115,25 @@ void Orchestrator::run() {
         m_world_updater.update_state_via_dT(dT);
         
         m_imgui_updater.update_state_via_dT(dT);
+
+        /* Render Pass */
+
+        m_renderer.start_frame();
+        m_renderer.render_frame();
+        m_renderer.end_frame();
+
+        m_imgui_updater.draw_gui();
         
-        
+        SDL_GL_SwapWindow(m_imgui_updater.window);        
         auto frame_end = clock::now();
         auto frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - last_frame_start);
         if (frame_duration.count() > 100) { // Warn if frame takes more than 100ms
             Debug::log("Warning: Frame took " + std::to_string(frame_duration.count()) + " ms", DebugLevel::WARN);
+        }
+
+        if (m_mode_state.check_flag(MODE_CLOSE_REQUESTED)) {
+            Debug::log("Close requested via ModeState flag. Exiting main loop.", DebugLevel::INFO);
+            sig_exit_loop();
         }
     }
 }

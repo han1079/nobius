@@ -17,7 +17,7 @@ bool BaseUpdater::shutdown() {
     return true;
 }
 
-bool BaseUpdater::update_state_via_event(SDL_Event &event) {
+bool BaseUpdater::update_state_via_event(EngineEvent &event) {
     // Default implementation - can be overridden by derived classes
     return true;
 }

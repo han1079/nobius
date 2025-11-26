@@ -22,19 +22,3 @@ protected:
 };
 
 
-class EventRouter {
-private:
-    SDL_Event& m_event;
-public:
-    EventRouter(SDL_Event& e) : m_event(e) {}
-    ~EventRouter() = default;
-
-    template <typename fcn_t, SDL_Event& event_class_name>
-    bool match_event_to_fcn(const fcn_t& callback){
-        if (m_event.type == event_class_name.type){
-            return callback(m_event);
-        }
-        return false;
-    }
-
-};

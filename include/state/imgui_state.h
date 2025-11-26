@@ -19,8 +19,6 @@ protected:
     void load_imgui_style_from_json(const nlohmann::json& style_json);
 
 private:
-
-
     // SDL and OpenGL default configuration parameters
     int sdl_flags = 0;
     SDL_GLprofile sdl_profile_mask = SDL_GL_CONTEXT_PROFILE_CORE;
@@ -62,7 +60,9 @@ private:
 private:
 
     int event_count = 0;
-    
+    void update_viewport_info(float x_pos, float y_pos, float width, float height);
+
+public:
     template <typename member_type>
     auto get(member_type member_name) -> decltype(this->*member_name) {
         return (this)->*member_name;
@@ -72,7 +72,5 @@ private:
     void set(member_type member_name, value_type val) {
         (this)->*member_name = val; 
     }
-
-    void update_viewport_info(float x_pos, float y_pos, float width, float height);
 
 };
