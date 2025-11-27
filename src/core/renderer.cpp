@@ -830,8 +830,10 @@ void Renderer::start_frame() {
     float window_y = Orchestrator::get()->get_imgui_state().canvas_y_pos;
 
     // Update viewport to match latest ImGui configuration. Clear and render latest draw.
-    GLCall(glViewport((GLint)window_x, (GLint)window_y, (GLsizei)window_width, (GLsizei)window_height));        
-    GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+    {
+        TIME_LOCATION();
+        GLCall(glViewport((GLint)window_x, (GLint)window_y, (GLsizei)window_width, (GLsizei)window_height));        
+    }
     process_request_buffer();
 }
 
@@ -852,6 +854,7 @@ void Renderer::end_frame() {
 }
 
 void Renderer::process_request_buffer() {
+    TIME_FUNCTION();
     std::vector<EntityData*> ordered_entity_list;
     std::vector<EntityData*> to_delete_list;
 

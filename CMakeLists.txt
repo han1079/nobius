@@ -11,8 +11,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
-    set(CMAKE_C_FLAGS_DEBUG "-g3 -O0 -DDEBUG -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
+    set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
     message(STATUS "Building in Debug mode for GDB")
 else()
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
@@ -55,6 +55,7 @@ set(CORE_BUILD ${CMAKE_SOURCE_DIR}/src/core/base_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/base_updater.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/common.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/entity.cpp
+                ${CMAKE_SOURCE_DIR}/src/core/shader.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/orchestrator.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/world_updater.cpp
                 ${CMAKE_SOURCE_DIR}/src/state/world_state.cpp
@@ -63,7 +64,8 @@ set(CORE_BUILD ${CMAKE_SOURCE_DIR}/src/core/base_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/imgui_updater.cpp
                 ${CMAKE_SOURCE_DIR}/src/state/imgui_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/event_ingester.cpp
-                ${CMAKE_SOURCE_DIR}/src/core/renderer.cpp)
+                ${CMAKE_SOURCE_DIR}/src/core/renderer.cpp
+                ${CMAKE_SOURCE_DIR}/src/utils/debug_console.cpp)
 
 set(APP_INCLUDE_PATHS ${CMAKE_SOURCE_DIR}/include
                        ${CMAKE_SOURCE_DIR}/ext 

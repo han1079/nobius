@@ -16,6 +16,7 @@ public:
     void update_time(float timestamp);  // Call once at start of SDL_PollEvent loop
     void update_window_hover();
     EngineEvent ingest_event(SDL_Event& event);
+    void update_window_params(float& win_x, float& win_y, float& win_width, float& win_height, std::string window_name);
     
     // Frame management
     void reset_changes();  // Call after SDL_PollEvents completes

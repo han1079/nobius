@@ -3,6 +3,7 @@
 #include <pch.h>
 
 
+
 /*  CMake should give the exact path to source, but this
     acts as a stopgap in weird cases / for LSPs to no freak out.
     build/ should be one stop above source regardless in my structure.
@@ -11,76 +12,11 @@
 #define PROJECT_SOURCE_DIR "../"
 #endif
 
+
 #define ORCH() Orchestrator::get()
-
-// Portable debug break macro
-#if defined(_MSC_VER)
-    #define DEBUG_BREAK() __debugbreak()
-#elif defined(__clang__)
-    #define DEBUG_BREAK() __builtin_debugtrap()
-#elif defined(__GNUC__)
-    #define DEBUG_BREAK() __builtin_trap()
-#else
-    #include <signal.h>
-    #define DEBUG_BREAK() raise(SIGTRAP)
-#endif
-
-#ifdef DEBUG
-    #define DEBUG_LOG(msg) Debug::log(msg, DebugLevel::TRACE)
-    #define DEBUG_VAR(var) Debug::log(#var " = " + std::to_string(var), DebugLevel::TRACE)
-#else
-    #define DEBUG_LOG(msg)
-    #define DEBUG_VAR(var)
-#endif
-
-#define ASSERT(x) if (!(x)) DEBUG_BREAK();
+#define ENUM_NAME(x) {x, #x}
 
 
-#define GLCall(x) GLClearError();\
-x;\
-ASSERT(GLLogCall(#x, __FILE__, __LINE__))
-
-inline bool GLLogCall(const char* function, const char* file, int line) {
-    while (GLenum error = glGetError()) {
-        std::cout << "[OpenGL Error] (" << error << "): " << function <<
-            " " << file << ":" << line << std::endl;
-        return false;
-    }
-    return true;
-}
-
-inline void GLClearError() {
-    while (glGetError() != GL_NO_ERROR);
-}
-
-
-enum DebugLevel { TRACE, INFO, WARN, ERROR, FATAL};
-
-class Debug {
-    public:
-    Debug() = delete;
-    ~Debug() = delete;
-    static void log(const std::string& msg, DebugLevel level = DebugLevel::INFO) {
-        switch (level) {
-            case TRACE:
-                std::cout << "[TRACE]: " << msg << std::endl;
-                break;
-            case INFO:
-                std::cout << "[INFO]: " << msg << std::endl;
-                break;
-            case WARN:
-                std::cout << "[WARN]: " << msg << std::endl;
-                break;
-            case ERROR:
-                std::cout << "[ERROR]: " << msg << std::endl;
-                break;
-            case FATAL:
-                std::cout << "[FATAL]: " << msg << std::endl;
-                abort();
-                break;
-        }
-    }
-};
 // Grow this list of events to include events that I actually care 
 // about from the perspective of non-ImGui state update interactions 
 // This is mostly user input stuff that draws stuff, like mouse 
@@ -90,12 +26,26 @@ enum class EngineEventType {
     None,
     Captured,
     Quit,
+    NoScreen,
     MouseMove,
     MouseButtonDown,
     MouseButtonUp,
     MouseWheel,
     KeyDown,
     KeyUp,
+};
+
+inline static std::unordered_map<EngineEventType, std::string> EngineEventTypeNames = {
+    ENUM_NAME(EngineEventType::None),
+    ENUM_NAME(EngineEventType::Captured),
+    ENUM_NAME(EngineEventType::Quit),
+    ENUM_NAME(EngineEventType::NoScreen),
+    ENUM_NAME(EngineEventType::MouseMove),
+    ENUM_NAME(EngineEventType::MouseButtonDown),
+    ENUM_NAME(EngineEventType::MouseButtonUp),
+    ENUM_NAME(EngineEventType::MouseWheel),
+    ENUM_NAME(EngineEventType::KeyDown),
+    ENUM_NAME(EngineEventType::KeyUp),
 };
 
 struct EngineEvent {
@@ -110,7 +60,22 @@ struct EngineEvent {
     SDL_Keysym key_info = {};
 };
 
-enum USER_MODES {
+enum class HoveredUIElement {
+    NONE,
+    SIDEBAR,
+    BOTTOM_PANEL,
+    RIBBON,
+    VIEWPORT
+};
+
+inline static std::unordered_map<HoveredUIElement, std::string> HoveredUIElementNames = {
+    ENUM_NAME(HoveredUIElement::NONE),
+    ENUM_NAME(HoveredUIElement::SIDEBAR),
+    ENUM_NAME(HoveredUIElement::BOTTOM_PANEL),
+    ENUM_NAME(HoveredUIElement::RIBBON),
+    ENUM_NAME(HoveredUIElement::VIEWPORT),
+};
+enum class UserMode {
     MODE_SELECT = (1 << 0), // Select Mode. Objects hover, and can be clicked on
     MODE_DRAG = (1 << 1), // Drag Mode. Entity is currently being selected and edited
     MODE_MOVE = (1 << 2), // Move Mode. Entity is being moved via center.
@@ -119,6 +84,17 @@ enum USER_MODES {
     MODE_INACTIVE = (1 << 5), // No Viewport Interaction Logic apart from "Reactivate"
     MODE_UIFOCUS = (1 << 6), // UI is being interacted with - runs off ImGui IO flag
     MODE_CLOSE_REQUESTED = 0 // Application close has been requested
+};
+
+inline static std::unordered_map<UserMode, std::string> UserModeNames = {
+    ENUM_NAME(UserMode::MODE_SELECT),
+    ENUM_NAME(UserMode::MODE_DRAG),
+    ENUM_NAME(UserMode::MODE_MOVE),
+    ENUM_NAME(UserMode::MODE_PLACE),
+    ENUM_NAME(UserMode::MODE_DELETE),
+    ENUM_NAME(UserMode::MODE_INACTIVE),
+    ENUM_NAME(UserMode::MODE_UIFOCUS),
+    ENUM_NAME(UserMode::MODE_CLOSE_REQUESTED),
 };
 
 struct LoadSpec {

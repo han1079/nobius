@@ -42,6 +42,7 @@ void Orchestrator::sig_exit_loop() {
 
 void Orchestrator::run() {
     /*Main Loop Lives Here*/
+    Instrumentor::Get().BeginSession("Main Loop", "results.json");
     using clock = std::chrono::steady_clock;
     auto last_time = clock::now();
     auto last_frame_start = clock::now();
@@ -65,15 +66,18 @@ void Orchestrator::run() {
         float dT = delta.count();
 
         m_event_ingester.update_time(current_time.time_since_epoch().count());
-
+        m_imgui_updater.draw_gui();
         // Process ALL pending events, not just one
         while (SDL_PollEvent(&sdl_event)) {
+            TIME_LOCATION();
             total_event_ct++; 
             loop_event_ct++;
 
             event = m_event_ingester.ingest_event(sdl_event);
-            
-            
+            if (event.type == EngineEventType::NoScreen) {
+                // Screen is not visible. Skip any event processing
+                continue;
+            }
             /* Take latest input event, and update state:
              *
              * ModeUpdater:   ImGui steals input - if so, run its update and
@@ -94,9 +98,7 @@ void Orchestrator::run() {
 
         m_event_ingester.reset_changes();
         loop_event_ct = 0;
-
         m_imgui_state.set(&ImGuiState::event_count, total_event_ct);
-
         
 
         /* Take the dT and update time-dependent state:
@@ -109,33 +111,42 @@ void Orchestrator::run() {
          * 
          * */
         
-        
         m_mode_updater.update_state_via_dT(dT);
         
         m_world_updater.update_state_via_dT(dT);
         
         m_imgui_updater.update_state_via_dT(dT);
-
         /* Render Pass */
 
         m_renderer.start_frame();
         m_renderer.render_frame();
         m_renderer.end_frame();
 
-        m_imgui_updater.draw_gui();
         
-        SDL_GL_SwapWindow(m_imgui_updater.window);        
+        
+        // Check if window is visible before swapping buffers
+        Uint32 window_flags = SDL_GetWindowFlags(m_imgui_updater.window);
+        bool should_swap = !(window_flags & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN));
+        
+        if (should_swap) {
+            SDL_GL_SwapWindow(m_imgui_updater.window);        
+
+        } else {
+            // Window is occluded, sleep a bit to avoid busy loop
+            SDL_Delay(16); // ~60 FPS equivalent
+        }
         auto frame_end = clock::now();
         auto frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - last_frame_start);
         if (frame_duration.count() > 100) { // Warn if frame takes more than 100ms
             Debug::log("Warning: Frame took " + std::to_string(frame_duration.count()) + " ms", DebugLevel::WARN);
         }
 
-        if (m_mode_state.check_flag(MODE_CLOSE_REQUESTED)) {
+        if (!m_mode_state.user_mode) {
             Debug::log("Close requested via ModeState flag. Exiting main loop.", DebugLevel::INFO);
             sig_exit_loop();
         }
     }
+    Instrumentor::Get().EndSession();
 }
 
 

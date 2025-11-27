@@ -18,7 +18,7 @@ bool ModeUpdater::update_state_via_event(EngineEvent &event) {
     const auto& imgui_state = orchestrator->get_imgui_state();
     
     if (event.type == EngineEventType::Quit) {
-        m_mode_data.set_flag(MODE_CLOSE_REQUESTED);
+        m_mode_data.set_closed();
         return true;
     }
     // Handle mouse click events

@@ -14,6 +14,9 @@ public:
     ImGuiUpdater(ImGuiState& state);
     ~ImGuiUpdater();
     friend class Orchestrator;
+    
+    // Getter for window access
+    SDL_Window* get_window() const { return window; }
 
 private:
     ImGuiState& m_cfg;

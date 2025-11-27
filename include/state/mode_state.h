@@ -57,17 +57,18 @@ struct TimeStampedFloatEvent {
     }
 };
 
-enum HoveredUIElement {
-    NONE,
-    SIDEBAR,
-    BOTTOM_PANEL,
-    RIBBON,
-    VIEWPORT
-};
+
 
 class UIState : public BaseState {
 public:
-    UIState() = default;
+    UIState() {
+        DEBUG_HOOK_FUNCTION_NO_TIMER();
+        DEBUG_HOOK_VAR_AS(hovered_element_name, "UI_HOVERED_ELEMENT");
+        DEBUG_HOOK_VAR_AS(mouse_x.value, "UI_MOUSE_X");
+        DEBUG_HOOK_VAR_AS(mouse_y.value, "UI_MOUSE_Y");
+        DEBUG_HOOK_VAR_AS(mouse_x_relative.value, "UI_MOUSE_X_RELATIVE");
+        DEBUG_HOOK_VAR_AS(mouse_y_relative.value, "UI_MOUSE_Y_RELATIVE");
+    }
     ~UIState() = default;
 
     template <typename member_type>
@@ -103,7 +104,8 @@ private:
     TimeStampedFloatEvent viewport_width;
     TimeStampedFloatEvent viewport_height;
 
-    HoveredUIElement hovered_element = NONE;
+    HoveredUIElement hovered_element = HoveredUIElement::NONE;
+    std::string hovered_element_name = "NONE";
     float latest_time = 0.0f;
 
     TimeStampedBoolEvent ctrl_state;
@@ -124,6 +126,7 @@ private:
 
     friend class EventIngester;
 
+    
 };
 
 class ModeState : public BaseState { 
@@ -138,7 +141,7 @@ protected:
 public:
     // Mode Information
     
-    uint32_t user_mode = MODE_SELECT;
+    uint32_t user_mode = (uint32_t)UserMode::MODE_SELECT;
     template <typename member_type>
     auto get(member_type member_name) -> decltype(this->*member_name) {
         return (this)->*member_name;
@@ -161,5 +164,9 @@ public:
     uint32_t clear_flag(uint32_t flag) {
         user_mode = (user_mode & (~flag));
         return user_mode;
+    }
+
+    void set_closed() {
+        user_mode = (uint32_t)UserMode::MODE_CLOSE_REQUESTED; //Zeros everything out - invalidates all other flags.
     }
 };

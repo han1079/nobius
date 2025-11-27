@@ -41,6 +41,11 @@ public:
     const ModeState& get_mode_state() const { return m_mode_state; }
     const WorldState& get_world_state() const { return m_world_state; }
     const UIState& get_ui_state() const { return m_ui_state; }
+
+    const EventIngester& get_event_ingester() const { return m_event_ingester; }
+    
+    // Window visibility check for renderer
+    bool is_window_visible() const;
     
 private:
 

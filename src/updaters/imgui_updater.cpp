@@ -57,7 +57,7 @@ bool ImGuiUpdater::init() {
     }
 
     SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
+    SDL_GL_SetSwapInterval(0); // Disable vsync, since it messes with window occulsion handling.
 
     // Setup Dear ImGui context
     ImGui::CreateContext();
@@ -93,7 +93,7 @@ bool ImGuiUpdater::init() {
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
-    ImGui::NewFrame();
+
 
     return true;
 }
@@ -148,12 +148,14 @@ void ImGuiUpdater::build_imgui_frame() {
 
     // Main viewport takes up left 70% of the window
     //ImGui::ShowStyleEditor(&style);
+    auto event_ingester = Orchestrator::get()->get_event_ingester();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
     ImGui::Begin("Main Window", viewport);
     ImVec2 pos = ImGui::GetWindowPos();
     ImVec2 size = ImGui::GetWindowSize();
+    event_ingester.update_window_params(pos.x, pos.y, size.x, size.y, "Main Window");
     m_cfg.update_viewport_info(pos.x, pos.y, size.x, size.y);
     ImGui::End();
 
@@ -162,6 +164,9 @@ void ImGuiUpdater::build_imgui_frame() {
     ImGui::SetNextWindowPos(ImVec2(full_window_size.x * 0.7, 0), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.3, full_window_size.y), ImGuiCond_FirstUseEver);
     ImGui::Begin("Sidebar", sidebar);
+    pos = ImGui::GetWindowPos();
+    size = ImGui::GetWindowSize();
+    event_ingester.update_window_params(pos.x, pos.y, size.x, size.y, "Sidebar");
     ImGui::Text("Info Panel");
     ImGui::Text("%s", PROJECT_SOURCE_DIR);
     if (ImGui::Button("Save Style")) {
@@ -173,19 +178,31 @@ void ImGuiUpdater::build_imgui_frame() {
     ImGui::SetNextWindowPos(ImVec2(0, full_window_size.y * 0.9), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x, full_window_size.y * 0.1), ImGuiCond_FirstUseEver);
     ImGui::Begin("Bottom Panel", bottom);
+    pos = ImGui::GetWindowPos();
+    size = ImGui::GetWindowSize();
+    event_ingester.update_window_params(pos.x, pos.y, size.x, size.y, "Bottom Panel");
     ImGui::Text("Timeline Slider Here");
     ImGui::End();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x, full_window_size.y * 0.1), ImGuiCond_FirstUseEver);
     ImGui::Begin("Ribbon", ribbon);
+    pos = ImGui::GetWindowPos();
+    size = ImGui::GetWindowSize();
+    event_ingester.update_window_params(pos.x, pos.y, size.x, size.y, "Ribbon");
     ImGui::Text("Play | Pause | Stop Buttons Here");
     ImGui::End();
     
-    ImGui::Begin("Style", viewport);
-    std::cout << "\r"<< &style << std::flush;
-    ImGui::ShowStyleEditor(&style);
-    ImGui::End();
+    // Variable Monitor Window
+    static bool show_variable_monitor = true;
+    if (show_variable_monitor) {
+        DebugConsole::getInstance().render(&show_variable_monitor);
+    }
+    
+    // ImGui::Begin("Style", viewport);
+
+    // ImGui::ShowStyleEditor(&style);
+    // ImGui::End();
 }
 
 bool ImGuiUpdater::update_state_via_dT(float dT) {
@@ -197,10 +214,13 @@ bool ImGuiUpdater::draw_gui() {
 
     static int frame_count = 0;
     frame_count++;
-    
-    // Log every 60 frames (about once per second at 60fps)
-    if (frame_count % 60 == 0) {
+    static bool registered_debugs = false;
+
+    if(!registered_debugs) {
+        auto& debug = DebugConsole::getInstance();
         
+        debug.hookVariable("frame_count", frame_count);
+        registered_debugs = true;
     }
     
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)

@@ -1,3 +1,5 @@
+#define PCH_H_INCLUDED
+
 #include <glad/glad.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -5,6 +7,18 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_access.hpp>
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <iostream>
+#include <utils/instrumentor.h>
+#include <utils/debug_utils.h>
+#include <functional>
+#include <string>
+#include <variant>
+#include <unordered_map>
+#include <utils/debug_console.h>
