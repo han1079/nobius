@@ -11,17 +11,17 @@ public:
 public:
 
     // Context data for the vertex 
-    glm::vec3 bounding_box; // Use this to draw the quad that contains the curve (this is the actual vertex)
-    glm::vec3 start_pt; // Starting point of the curve. Used by the shader to compute curve
-    glm::vec3 end_pt; // Ending point of the curve. Used by the shader to compute curve
-    glm::vec3 control_pt_1; // Control point 1 for Bezier curve. Also stands for radius if drawing a circle
-    glm::vec3 control_pt_2; // Control point 2 for Bezier curve
+    glm::vec3 bounding_box = {0.0f, 0.0f, 0.0f}; // Use this to draw the quad that contains the curve (this is the actual vertex)
+    glm::vec3 start_pt = {0.0f, 0.0f, 0.0f}; // Starting point of the curve. Used by the shader to compute curve
+    glm::vec3 end_pt = {0.0f, 0.0f, 0.0f}; // Ending point of the curve. Used by the shader to compute curve
+    glm::vec3 control_pt_1 = {0.0f, 0.0f, 0.0f}; // Control point 1 for Bezier curve. Also stands for radius if drawing a circle
+    glm::vec3 control_pt_2 = {0.0f, 0.0f, 0.0f}; // Control point 2 for Bezier curve
 
     // Color, thickness, etc
 
-    glm::vec2 tex_coords;
-    int thickness;
-    int filled;
+    glm::vec2 tex_coords = {0.0f, 0.0f};
+    int thickness = 0;
+    int filled = 0;
 
 };
 
@@ -50,7 +50,8 @@ enum BufferRequestType{
 */
 class EntityData {
 public:
-    EntityData() = default;
+    EntityData() = delete;
+    EntityData(const uint64_t& uuid) : UUID(uuid) {}
     ~EntityData() = default;
 private:
     std::vector<int> vertex_draw_orders;
@@ -67,31 +68,31 @@ struct BufferRequest; //Forward Decclaration. TODO: Move this into a proper head
 
 class Entity {
 public:
-    uint64_t get_uuid() const {
-        return gpu_data.UUID;
-    }
+    Entity() = delete;
+    Entity(const uint64_t& uuid) : gpu_data(uuid) {}
+    ~Entity() = default;
 
-    inline static std::queue<BufferRequest> RenderRequestBuffer;
+public:
+
+    uint64_t get_uuid() const { return gpu_data.UUID; }
+    unsigned int get_vertex_size() const { return gpu_data.vertex_count; }
+    std::vector<int> get_local_index_buf() const { return gpu_data.vertex_draw_orders; }
+    std::vector<RichVertex> get_vertex_buf_data() const {return gpu_data.vertex_data; }
+
 private:
     glm::vec3 origin;
     float size;
 
-    const uint64_t UUID;
-
-    bool selectable;
-    bool draggable;
-    bool movable;
-    bool visible;
+    bool selectable = false;
+    bool draggable = false;
+    bool movable = false;
+    bool visible = false;
 
     EntityData gpu_data;
 
     friend class WorldData;
     friend class WorldUpdater;
 
-private:
-    void update_gpu_draw_data(const EntityData& new_data) {
-        return;
-    }
 };
 
 struct BufferRequest {
