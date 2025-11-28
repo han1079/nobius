@@ -1,13 +1,51 @@
-#include <updaters/event_ingester.h>
+#include <updaters/input_system.h>
 #include <imgui_internal.h>
 
-void EventIngester::update_time(float timestamp) {
-    m_ui_state.latest_time = timestamp;
+InputSystem::InputSystem() 
+    : ctrl_state(), shift_state(), alt_state(),
+      mouse_left_state(), mouse_right_state(), mouse_middle_state(),
+      mouse_wheel_dy(),
+      mouse_x(), mouse_y(),
+      mouse_x_relative(), mouse_y_relative()
+{
+    for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
+        key_states[i] = TimeStampedBool();
+    }
+    DEBUG_HOOK_FUNCTION_NO_TIMER();
+    DEBUG_HOOK_VAR_AS(hovered_element_name, "HOVERED_UI_ELEMENT_NAME");
 }
 
-void EventIngester::update_window_hover() {
+void InputSystem::update_time(float timestamp) {
+    latest_time = timestamp;
+}
+
+bool InputSystem::is_key_pressed(SDL_Scancode key) const {
+    if (key >= 0 && key < SDL_NUM_SCANCODES) {
+        return key_states[key].value;
+    }
+    return false;
+}
+
+bool InputSystem::just_pressed(SDL_Scancode key) const {
+    if (key >= 0 && key < SDL_NUM_SCANCODES) {
+        return key_states[key].just_became_true();
+    }
+    return false;
+}
+
+bool InputSystem::is_mouse_pressed(int button) const {
+    switch(button) {
+        case SDL_BUTTON_LEFT: return mouse_left_state.value;
+        case SDL_BUTTON_RIGHT: return mouse_right_state.value;
+        case SDL_BUTTON_MIDDLE: return mouse_middle_state.value;
+        default: return false;
+    }
+}
+
+void InputSystem::update_window_hover() {
     ImGuiWindow* hovered_window = ImGui::GetCurrentContext()->HoveredWindow;
     std::string window_name;
+
     
     if (hovered_window) {
         window_name = std::string(hovered_window->Name);
@@ -15,35 +53,33 @@ void EventIngester::update_window_hover() {
         window_name = "None";
     }
 
-    
-    
     if (hovered_window) {
         std::cout << "Hovered window: " << window_name.c_str() << std::endl; 
         if (strcmp(window_name.c_str(), "Sidebar") == 0) {
-            m_ui_state.hovered_element = HoveredUIElement::SIDEBAR;
-            m_ui_state.hovered_element_name = HoveredUIElementNames[HoveredUIElement::SIDEBAR];
+            hovered_element = HoveredUIElement::SIDEBAR;
+            hovered_element_name = HoveredUIElementNames[HoveredUIElement::SIDEBAR];
         } else if (strcmp(window_name.c_str(), "Bottom Panel") == 0) {
-            m_ui_state.hovered_element = HoveredUIElement::BOTTOM_PANEL;
-            m_ui_state.hovered_element_name = HoveredUIElementNames[HoveredUIElement::BOTTOM_PANEL];
+            hovered_element = HoveredUIElement::BOTTOM_PANEL;
+            hovered_element_name = HoveredUIElementNames[HoveredUIElement::BOTTOM_PANEL];
         } else if (strcmp(window_name.c_str(), "Ribbon") == 0) {
-            m_ui_state.hovered_element = HoveredUIElement::RIBBON;
-            m_ui_state.hovered_element_name = HoveredUIElementNames[HoveredUIElement::RIBBON];
+            hovered_element = HoveredUIElement::RIBBON;
+            hovered_element_name = HoveredUIElementNames[HoveredUIElement::RIBBON];
         } else if (strcmp(window_name.c_str(), "Main Window") == 0) {
-            m_ui_state.hovered_element = HoveredUIElement::VIEWPORT;
-            m_ui_state.hovered_element_name = HoveredUIElementNames[HoveredUIElement::VIEWPORT];
+            hovered_element = HoveredUIElement::VIEWPORT;
+            hovered_element_name = HoveredUIElementNames[HoveredUIElement::VIEWPORT];
         } else {
-            m_ui_state.hovered_element = HoveredUIElement::NONE;
-            m_ui_state.hovered_element_name = HoveredUIElementNames[HoveredUIElement::NONE];
+            hovered_element = HoveredUIElement::NONE;
+            hovered_element_name = HoveredUIElementNames[HoveredUIElement::NONE];
         }
         
     } else {
         std::cout << "Hovered window: None" << std::endl;
-        m_ui_state.hovered_element = HoveredUIElement::NONE;
-        m_ui_state.hovered_element_name = HoveredUIElementNames[HoveredUIElement::NONE];
+        hovered_element = HoveredUIElement::NONE;
+        hovered_element_name = HoveredUIElementNames[HoveredUIElement::NONE];
     }
 }
 
-EngineEvent EventIngester::ingest_event(SDL_Event& e) {
+EngineEvent InputSystem::ingest_event(SDL_Event& e) {
     EngineEvent event;
     event.type = EngineEventType::None;
 
@@ -53,16 +89,16 @@ EngineEvent EventIngester::ingest_event(SDL_Event& e) {
     DEBUG_HOOK_VAR_AS(event_type_dbg, "SDL_EVENT_TYPE");
     DEBUG_HOOK_VAR_AS(capture_state, "SDL_EVENT_CAPTURED");
 
-
     ImGui_ImplSDL2_ProcessEvent(&e);
     if (e.type == SDL_QUIT || (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_CLOSE)){
         Debug::log("SDL_QUIT EVENT SEEN", DebugLevel::TRACE);
+        set_closed();  // Set mode to closed
         event.type = EngineEventType::Quit;
         return event;
     }
 
     // Use existing hover detection - only pass events through if over viewport/canvas
-    if (m_ui_state.hovered_element != HoveredUIElement::VIEWPORT) {
+    if (hovered_element != HoveredUIElement::VIEWPORT) {
         // Not over canvas/viewport - ImGui UI should handle this event
         event.type = EngineEventType::Captured;
         capture_state = "CAPTURED";
@@ -144,56 +180,56 @@ EngineEvent EventIngester::ingest_event(SDL_Event& e) {
     switch(event.type) {
         case EngineEventType::KeyDown:
             if (event.key_info.scancode < SDL_NUM_SCANCODES && event.key_info.scancode >= 0) {
-                m_ui_state.KeyStates[event.key_info.scancode].update(true, m_ui_state.latest_time);
+                key_states[event.key_info.scancode].update(true, latest_time);
                 if (event.key_info.scancode == SDL_SCANCODE_LCTRL || event.key_info.scancode == SDL_SCANCODE_RCTRL) {
-                    m_ui_state.ctrl_state.update(true, m_ui_state.latest_time);
+                    ctrl_state.update(true, latest_time);
                 } else if (event.key_info.scancode == SDL_SCANCODE_LSHIFT || event.key_info.scancode == SDL_SCANCODE_RSHIFT) {
-                    m_ui_state.shift_state.update(true, m_ui_state.latest_time);
+                    shift_state.update(true, latest_time);
                 } else if (event.key_info.scancode == SDL_SCANCODE_LALT || event.key_info.scancode == SDL_SCANCODE_RALT) {
-                    m_ui_state.alt_state.update(true, m_ui_state.latest_time);
+                    alt_state.update(true, latest_time);
                 }
             }
             break;
 
         case EngineEventType::KeyUp:
             if (event.key_info.scancode < SDL_NUM_SCANCODES && event.key_info.scancode >= 0) {
-                m_ui_state.KeyStates[event.key_info.scancode].update(false, m_ui_state.latest_time);
+                key_states[event.key_info.scancode].update(false, latest_time);
                 if (event.key_info.scancode == SDL_SCANCODE_LCTRL || event.key_info.scancode == SDL_SCANCODE_RCTRL) {
-                    m_ui_state.ctrl_state.update(false, m_ui_state.latest_time);
+                    ctrl_state.update(false, latest_time);
                 } else if (event.key_info.scancode == SDL_SCANCODE_LSHIFT || event.key_info.scancode == SDL_SCANCODE_RSHIFT) {
-                    m_ui_state.shift_state.update(false, m_ui_state.latest_time);
+                    shift_state.update(false, latest_time);
                 } else if (event.key_info.scancode == SDL_SCANCODE_LALT || event.key_info.scancode == SDL_SCANCODE_RALT) {
-                    m_ui_state.alt_state.update(false, m_ui_state.latest_time);
+                    alt_state.update(false, latest_time);
                 }
             }
             break;
 
         case EngineEventType::MouseButtonDown:
             if (event.mouse_button == SDL_BUTTON_LEFT) {
-                m_ui_state.mouse_left_state.update(true, m_ui_state.latest_time);
+                mouse_left_state.update(true, latest_time);
             } else if (event.mouse_button == SDL_BUTTON_RIGHT) {
-                m_ui_state.mouse_right_state.update(true, m_ui_state.latest_time);
+                mouse_right_state.update(true, latest_time);
             } else if (event.mouse_button == SDL_BUTTON_MIDDLE) {
-                m_ui_state.mouse_middle_state.update(true, m_ui_state.latest_time);
+                mouse_middle_state.update(true, latest_time);
             }
             break;
 
         case EngineEventType::MouseButtonUp:
             if (event.mouse_button == SDL_BUTTON_LEFT) {
-                m_ui_state.mouse_left_state.update(false, m_ui_state.latest_time);
+                mouse_left_state.update(false, latest_time);
             } else if (event.mouse_button == SDL_BUTTON_RIGHT) {
-                m_ui_state.mouse_right_state.update(false, m_ui_state.latest_time);
+                mouse_right_state.update(false, latest_time);
             } else if (event.mouse_button == SDL_BUTTON_MIDDLE) {
-                m_ui_state.mouse_middle_state.update(false, m_ui_state.latest_time);
+                mouse_middle_state.update(false, latest_time);
             }
             break;
 
         case EngineEventType::MouseMove:
-            update_mouse(static_cast<float>(event.mouse_x), static_cast<float>(event.mouse_y), m_ui_state.latest_time);
+            update_mouse(static_cast<float>(event.mouse_x), static_cast<float>(event.mouse_y), latest_time);
             break;
 
         case EngineEventType::MouseWheel:
-            m_ui_state.mouse_wheel_dy.update(static_cast<float>(event.wheel_dy), m_ui_state.latest_time);
+            mouse_wheel_dy.update(static_cast<float>(event.wheel_dy), latest_time);
             break;
 
         default:
@@ -204,26 +240,26 @@ EngineEvent EventIngester::ingest_event(SDL_Event& e) {
     return event;
 }
 
-void EventIngester::update_mouse(float new_mouse_x, float new_mouse_y, float timestamp) {
+void InputSystem::update_mouse(float new_mouse_x, float new_mouse_y, float timestamp) {
     float win_x = 0.0f;
     float win_y = 0.0f;
     
-    switch(m_ui_state.hovered_element) {
+    switch(hovered_element) {
         case HoveredUIElement::VIEWPORT:
-            win_x = m_ui_state.viewport_x.value;
-            win_y = m_ui_state.viewport_y.value; 
+            win_x = viewport_x.value;
+            win_y = viewport_y.value; 
             break;
         case HoveredUIElement::SIDEBAR:
-            win_x = m_ui_state.sidebar_x.value;
-            win_y = m_ui_state.sidebar_y.value;
+            win_x = sidebar_x.value;
+            win_y = sidebar_y.value;
             break;
         case HoveredUIElement::BOTTOM_PANEL:
-            win_x = m_ui_state.bottom_x.value;
-            win_y = m_ui_state.bottom_y.value;
+            win_x = bottom_x.value;
+            win_y = bottom_y.value;
             break;
         case HoveredUIElement::RIBBON:
-            win_x = m_ui_state.ribbon_x.value;
-            win_y = m_ui_state.ribbon_y.value;
+            win_x = ribbon_x.value;
+            win_y = ribbon_y.value;
             break;
         default:
             win_x = 0.0f;
@@ -231,86 +267,85 @@ void EventIngester::update_mouse(float new_mouse_x, float new_mouse_y, float tim
             break;
     }
     
-    m_ui_state.mouse_x_relative.update(new_mouse_x - win_x, timestamp);
-    m_ui_state.mouse_y_relative.update(new_mouse_y - win_y, timestamp);
-    m_ui_state.mouse_x.update(new_mouse_x, timestamp);
-    m_ui_state.mouse_y.update(new_mouse_y, timestamp);
+    mouse_x_relative.update(new_mouse_x - win_x, timestamp);
+    mouse_y_relative.update(new_mouse_y - win_y, timestamp);
+    mouse_x.update(new_mouse_x, timestamp);
+    mouse_y.update(new_mouse_y, timestamp);
 }
 
-void EventIngester::reset_changes() {
+void InputSystem::reset_changes() {
     // Reset all change counters after SDL_PollEvents is complete
-    m_ui_state.ctrl_state.reset_changes();
-    m_ui_state.shift_state.reset_changes();
-    m_ui_state.alt_state.reset_changes();
+    ctrl_state.reset_changes();
+    shift_state.reset_changes();
+    alt_state.reset_changes();
     
-    m_ui_state.mouse_left_state.reset_changes();
-    m_ui_state.mouse_right_state.reset_changes();
-    m_ui_state.mouse_middle_state.reset_changes();
+    mouse_left_state.reset_changes();
+    mouse_right_state.reset_changes();
+    mouse_middle_state.reset_changes();
     
-    m_ui_state.mouse_wheel_dy.reset_changes();
-    m_ui_state.mouse_x.reset_changes();
-    m_ui_state.mouse_y.reset_changes();
-    m_ui_state.mouse_x_relative.reset_changes();
-    m_ui_state.mouse_y_relative.reset_changes();
+    mouse_wheel_dy.reset_changes();
+    mouse_x.reset_changes();
+    mouse_y.reset_changes();
+    mouse_x_relative.reset_changes();
+    mouse_y_relative.reset_changes();
     
     // Reset all individual key states
     for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
-        m_ui_state.KeyStates[i].reset_changes();
+        key_states[i].reset_changes();
     }
     
     // Reset UI element position tracking
-    m_ui_state.sidebar_x.reset_changes();
-    m_ui_state.sidebar_y.reset_changes();
-    m_ui_state.sidebar_width.reset_changes();
-    m_ui_state.sidebar_height.reset_changes();
+    sidebar_x.reset_changes();
+    sidebar_y.reset_changes();
+    sidebar_width.reset_changes();
+    sidebar_height.reset_changes();
     
-    m_ui_state.bottom_x.reset_changes();
-    m_ui_state.bottom_y.reset_changes();
-    m_ui_state.bottom_width.reset_changes();
-    m_ui_state.bottom_height.reset_changes();
+    bottom_x.reset_changes();
+    bottom_y.reset_changes();
+    bottom_width.reset_changes();
+    bottom_height.reset_changes();
     
-    m_ui_state.ribbon_x.reset_changes();
-    m_ui_state.ribbon_y.reset_changes();
-    m_ui_state.ribbon_width.reset_changes();
-    m_ui_state.ribbon_height.reset_changes();
+    ribbon_x.reset_changes();
+    ribbon_y.reset_changes();
+    ribbon_width.reset_changes();
+    ribbon_height.reset_changes();
     
-    m_ui_state.viewport_x.reset_changes();
-    m_ui_state.viewport_y.reset_changes();
-    m_ui_state.viewport_width.reset_changes();
-    m_ui_state.viewport_height.reset_changes();
+    viewport_x.reset_changes();
+    viewport_y.reset_changes();
+    viewport_width.reset_changes();
+    viewport_height.reset_changes();
 
     // Update window hover state once per frame
     // at the end of the frame so the dT loop has the latest mouse window location.
     update_window_hover();
 }
 
-void EventIngester::begin_frame(float timestamp) {
+void InputSystem::begin_frame(float timestamp) {
     // Update timestamp once at the start of the polling loop
-    m_ui_state.latest_time = timestamp;
-    
+    latest_time = timestamp;
 }
 
-void EventIngester::update_window_params(float& win_x, float& win_y, float& win_width, float& win_height, std::string window_name) {
+void InputSystem::update_window_params(float& win_x, float& win_y, float& win_width, float& win_height, std::string window_name) {
     if (window_name == "Sidebar") {
-        m_ui_state.sidebar_x.update(win_x, m_ui_state.latest_time);
-        m_ui_state.sidebar_y.update(win_y, m_ui_state.latest_time);
-        m_ui_state.sidebar_width.update(win_width, m_ui_state.latest_time);
-        m_ui_state.sidebar_height.update(win_height, m_ui_state.latest_time);
+        sidebar_x.update(win_x, latest_time);
+        sidebar_y.update(win_y, latest_time);
+        sidebar_width.update(win_width, latest_time);
+        sidebar_height.update(win_height, latest_time);
     } else if (window_name == "Bottom Panel") {
-        m_ui_state.bottom_x.update(win_x, m_ui_state.latest_time);
-        m_ui_state.bottom_y.update(win_y, m_ui_state.latest_time);
-        m_ui_state.bottom_width.update(win_width, m_ui_state.latest_time);
-        m_ui_state.bottom_height.update(win_height, m_ui_state.latest_time);
+        bottom_x.update(win_x, latest_time);
+        bottom_y.update(win_y, latest_time);
+        bottom_width.update(win_width, latest_time);
+        bottom_height.update(win_height, latest_time);
     } else if (window_name == "Ribbon") {
-        m_ui_state.ribbon_x.update(win_x, m_ui_state.latest_time);
-        m_ui_state.ribbon_y.update(win_y, m_ui_state.latest_time);
-        m_ui_state.ribbon_width.update(win_width, m_ui_state.latest_time);
-        m_ui_state.ribbon_height.update(win_height, m_ui_state.latest_time);
+        ribbon_x.update(win_x, latest_time);
+        ribbon_y.update(win_y, latest_time);
+        ribbon_width.update(win_width, latest_time);
+        ribbon_height.update(win_height, latest_time);
     } else if (window_name == "Main Window") {
-        m_ui_state.viewport_x.update(win_x, m_ui_state.latest_time);
-        m_ui_state.viewport_y.update(win_y, m_ui_state.latest_time);
-        m_ui_state.viewport_width.update(win_width, m_ui_state.latest_time);
-        m_ui_state.viewport_height.update(win_height, m_ui_state.latest_time);
+        viewport_x.update(win_x, latest_time);
+        viewport_y.update(win_y, latest_time);
+        viewport_width.update(win_width, latest_time);
+        viewport_height.update(win_height, latest_time);
     } else {
         // Default case - no specific window handling needed
     }

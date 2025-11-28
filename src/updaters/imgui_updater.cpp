@@ -2,7 +2,6 @@
 #include "core/common.h"
 #include "imgui.h"
 #include <updaters/imgui_updater.h>
-#include <state/mode_state.h>
 #include <iostream>
 #include <updaters/orchestrator.h>
 
@@ -148,14 +147,14 @@ void ImGuiUpdater::build_imgui_frame() {
 
     // Main viewport takes up left 70% of the window
     //ImGui::ShowStyleEditor(&style);
-    auto event_ingester = Orchestrator::get()->get_event_ingester();
+    auto& input_system = Orchestrator::get()->get_input();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
     ImGui::Begin("Main Window", viewport);
     ImVec2 pos = ImGui::GetWindowPos();
     ImVec2 size = ImGui::GetWindowSize();
-    event_ingester.update_window_params(pos.x, pos.y, size.x, size.y, "Main Window");
+    input_system.update_window_params(pos.x, pos.y, size.x, size.y, "Main Window");
     m_cfg.update_viewport_info(pos.x, pos.y, size.x, size.y);
     ImGui::End();
 
@@ -166,7 +165,7 @@ void ImGuiUpdater::build_imgui_frame() {
     ImGui::Begin("Sidebar", sidebar);
     pos = ImGui::GetWindowPos();
     size = ImGui::GetWindowSize();
-    event_ingester.update_window_params(pos.x, pos.y, size.x, size.y, "Sidebar");
+    input_system.update_window_params(pos.x, pos.y, size.x, size.y, "Sidebar");
     ImGui::Text("Info Panel");
     ImGui::Text("%s", PROJECT_SOURCE_DIR);
     if (ImGui::Button("Save Style")) {
@@ -180,7 +179,7 @@ void ImGuiUpdater::build_imgui_frame() {
     ImGui::Begin("Bottom Panel", bottom);
     pos = ImGui::GetWindowPos();
     size = ImGui::GetWindowSize();
-    event_ingester.update_window_params(pos.x, pos.y, size.x, size.y, "Bottom Panel");
+    input_system.update_window_params(pos.x, pos.y, size.x, size.y, "Bottom Panel");
     ImGui::Text("Timeline Slider Here");
     ImGui::End();
 
@@ -189,7 +188,7 @@ void ImGuiUpdater::build_imgui_frame() {
     ImGui::Begin("Ribbon", ribbon);
     pos = ImGui::GetWindowPos();
     size = ImGui::GetWindowSize();
-    event_ingester.update_window_params(pos.x, pos.y, size.x, size.y, "Ribbon");
+    input_system.update_window_params(pos.x, pos.y, size.x, size.y, "Ribbon");
     ImGui::Text("Play | Pause | Stop Buttons Here");
     ImGui::End();
     

@@ -4,13 +4,10 @@
 #include <core/common.h>
 
 #include <state/imgui_state.h>
-#include <state/mode_state.h>
-#include <state/world_state.h>
 
-#include <updaters/mode_updater.h>
 #include <updaters/world_updater.h>
 #include <updaters/imgui_updater.h>
-#include <updaters/event_ingester.h>
+#include <updaters/input_system.h>
 
 #include <core/renderer.h>
 
@@ -38,11 +35,18 @@ public:
     
     // Getter methods
     const ImGuiState& get_imgui_state() const { return m_imgui_state; }
-    const ModeState& get_mode_state() const { return m_mode_state; }
-    const WorldState& get_world_state() const { return m_world_state; }
-    const UIState& get_ui_state() const { return m_ui_state; }
+    const WorldUpdater& get_world() const { return m_world_updater; }
+    const InputSystem& get_input() const { return m_input_system; }
+    
+    // Mutable getters for systems that need to be modified
+    InputSystem& get_input() { return m_input_system; }
+    
+    // Convenience accessors for common operations
+    glm::vec2 get_mouse_position() const { return m_input_system.get_mouse_position(); }
+    bool is_mode(UserMode mode) const { return m_input_system.is_mode(mode); }
+    bool is_key_pressed(SDL_Scancode key) const { return m_input_system.is_key_pressed(key); }
 
-    const EventIngester& get_event_ingester() const { return m_event_ingester; }
+
     
     // Window visibility check for renderer
     bool is_window_visible() const;
@@ -57,28 +61,23 @@ private:
 
     /*The Orchestrator owns the following state trackers
      *
-     * UIState - UI Interaction States (hovered elements, mouse pos, key states)
-     * ModeState - Bulk Modes (Edit Modes, window minimized, pause/run, etc)
-     * WorldState - Entities, Scene Data, dT steps
      * ImGuiState - Window configuration, shader code strings, etc
+     *
+     * Note: InputSystem now contains all input/mode state
+     * Note: WorldUpdater now contains its own world state
      *
      * */
 
-    UIState m_ui_state;
-    ModeState m_mode_state;
-    WorldState m_world_state;
     ImGuiState m_imgui_state;
 
     /*The Orchestrator owns the following control objects:
      * 
-     * ModeUpdater
+     * InputSystem (was EventIngester + ModeUpdater)
      * WorldUpdater
      * ImGuiUpdater
-     * EventIngester
      * 
      * */
-    EventIngester m_event_ingester;
-    ModeUpdater m_mode_updater;
+    InputSystem m_input_system;
     WorldUpdater m_world_updater;
     ImGuiUpdater m_imgui_updater;
 

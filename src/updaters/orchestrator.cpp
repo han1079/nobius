@@ -4,13 +4,9 @@
 
 /*Load Spec Constructor. Member objects find and build with load spec filename string*/
 Orchestrator::Orchestrator(const LoadSpec& load_spec):
-        m_mode_state(load_spec.mode_state_spec),
-        m_world_state(load_spec.world_state_spec),
         m_imgui_state(load_spec.imgui_state_spec),
-        m_ui_state(),
-        m_event_ingester(m_ui_state),
-        m_mode_updater(m_mode_state),
-        m_world_updater(m_world_state),
+        m_input_system(),
+        m_world_updater(),
         m_imgui_updater(m_imgui_state) {
         m_orchestrator_ptr = this;
     }
@@ -20,7 +16,6 @@ Orchestrator::~Orchestrator() = default;
 
 void Orchestrator::init(){
     // Recursive Init
-    m_mode_updater.init();
     m_world_updater.init();
     m_imgui_updater.init();
     
@@ -65,7 +60,7 @@ void Orchestrator::run() {
         last_time = current_time;
         float dT = delta.count();
 
-        m_event_ingester.update_time(current_time.time_since_epoch().count());
+        m_input_system.update_time(current_time.time_since_epoch().count());
         m_imgui_updater.draw_gui();
         // Process ALL pending events, not just one
         while (SDL_PollEvent(&sdl_event)) {
@@ -73,7 +68,7 @@ void Orchestrator::run() {
             total_event_ct++; 
             loop_event_ct++;
 
-            event = m_event_ingester.ingest_event(sdl_event);
+            event = m_input_system.ingest_event(sdl_event);
             if (event.type == EngineEventType::NoScreen) {
                 // Screen is not visible. Skip any event processing
                 continue;
@@ -91,12 +86,11 @@ void Orchestrator::run() {
              *
              * ImGuiUpdater:  Bulk renderer configuration update (shader modes, themes)
              * */
-            m_mode_updater.update_state_via_event(event);
             m_world_updater.update_state_via_event(event);
             m_imgui_updater.update_state_via_event(event);
         }
 
-        m_event_ingester.reset_changes();
+        m_input_system.reset_changes();
         loop_event_ct = 0;
         m_imgui_state.set(&ImGuiState::event_count, total_event_ct);
         
@@ -110,8 +104,6 @@ void Orchestrator::run() {
          * ImGuiUpdater:  Runs the renderer pipeline submit
          * 
          * */
-        
-        m_mode_updater.update_state_via_dT(dT);
         
         m_world_updater.update_state_via_dT(dT);
         
@@ -141,8 +133,8 @@ void Orchestrator::run() {
             Debug::log("Warning: Frame took " + std::to_string(frame_duration.count()) + " ms", DebugLevel::WARN);
         }
 
-        if (!m_mode_state.user_mode) {
-            Debug::log("Close requested via ModeState flag. Exiting main loop.", DebugLevel::INFO);
+        if (!m_input_system.get_mode_flags()) {
+            Debug::log("Close requested via InputSystem flag. Exiting main loop.", DebugLevel::INFO);
             sig_exit_loop();
         }
     }
@@ -154,7 +146,6 @@ void Orchestrator::run() {
 void Orchestrator::shutdown() {
     m_running = false;
     /*Shutoff sequence*/
-    m_mode_updater.shutdown();
     m_world_updater.shutdown();
     m_imgui_updater.shutdown();
 }

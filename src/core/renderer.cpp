@@ -854,96 +854,96 @@ void Renderer::end_frame() {
 }
 
 void Renderer::process_request_buffer() {
-    TIME_FUNCTION();
-    std::vector<EntityData*> ordered_entity_list;
-    std::vector<EntityData*> to_delete_list;
+    // TIME_FUNCTION();
+    // std::vector<EntityData*> ordered_entity_list;
+    // std::vector<EntityData*> to_delete_list;
 
-    auto checkout = [&](EntityData* entity) -> EntityMemory& {
-        EntityMemory& ent_mem = m_entity_registry.at(entity->UUID);
-        if (ent_mem.ingested_flags.first_seen_idx < 0) {
-            ordered_entity_list.push_back(entity);
-            ent_mem.ingested_flags.first_seen_idx = ordered_entity_list.size();
-        }
-        return ent_mem;
-    };
+    // auto checkout = [&](EntityData* entity) -> EntityMemory& {
+    //     EntityMemory& ent_mem = m_entity_registry.at(entity->UUID);
+    //     if (ent_mem.ingested_flags.first_seen_idx < 0) {
+    //         ordered_entity_list.push_back(entity);
+    //         ent_mem.ingested_flags.first_seen_idx = ordered_entity_list.size();
+    //     }
+    //     return ent_mem;
+    // };
 
-    while(!Entity::RenderRequestBuffer.empty()) {
-        BufferRequest req = Entity::RenderRequestBuffer.front();
-        Entity::RenderRequestBuffer.pop();
+    // while(!Entity::RenderRequestBuffer.empty()) {
+    //     BufferRequest req = Entity::RenderRequestBuffer.front();
+    //     Entity::RenderRequestBuffer.pop();
         
-        EntityMemory& ent_mem = checkout(req.p_entity_data);
+    //     EntityMemory& ent_mem = checkout(req.p_entity_data);
 
-        if (req.type == BufferRequestType::REGISTER) {
-            ent_mem.ingested_flags.size_changed = true;
-            ent_mem.ingested_flags.verts_changed = true;
-            ent_mem.ingested_flags.new_entity = true;
-            m_IBO_dirty = true;
-        } else if (req.type == BufferRequestType::SHOW) {
-            ent_mem.ingested_flags.next_vis_state = true;
-            m_IBO_dirty = true;
-        } else if (req.type == BufferRequestType::HIDE) {
-            ent_mem.ingested_flags.next_vis_state = false;
-            m_IBO_dirty = true;
-        } else if (req.type == BufferRequestType::UPDATE) {
-            if (req.p_entity_data->vertex_count != ent_mem.total_size) {
-                ent_mem.ingested_flags.size_changed = true;
-                m_IBO_dirty = true;
-            }
-            ent_mem.ingested_flags.verts_changed = true;
-        } else if (req.type == BufferRequestType::DELETE) {
-            ent_mem.ingested_flags.to_delete = true;
-            to_delete_list.push_back(req.p_entity_data);
-            m_IBO_dirty = true;
-        } else {
-            Debug::log("Invalid Render Request.", DebugLevel::ERROR);
-            ASSERT(false);
-        }
-    }
+    //     if (req.type == BufferRequestType::REGISTER) {
+    //         ent_mem.ingested_flags.size_changed = true;
+    //         ent_mem.ingested_flags.verts_changed = true;
+    //         ent_mem.ingested_flags.new_entity = true;
+    //         m_IBO_dirty = true;
+    //     } else if (req.type == BufferRequestType::SHOW) {
+    //         ent_mem.ingested_flags.next_vis_state = true;
+    //         m_IBO_dirty = true;
+    //     } else if (req.type == BufferRequestType::HIDE) {
+    //         ent_mem.ingested_flags.next_vis_state = false;
+    //         m_IBO_dirty = true;
+    //     } else if (req.type == BufferRequestType::UPDATE) {
+    //         if (req.p_entity_data->vertex_count != ent_mem.total_size) {
+    //             ent_mem.ingested_flags.size_changed = true;
+    //             m_IBO_dirty = true;
+    //         }
+    //         ent_mem.ingested_flags.verts_changed = true;
+    //     } else if (req.type == BufferRequestType::DELETE) {
+    //         ent_mem.ingested_flags.to_delete = true;
+    //         to_delete_list.push_back(req.p_entity_data);
+    //         m_IBO_dirty = true;
+    //     } else {
+    //         Debug::log("Invalid Render Request.", DebugLevel::ERROR);
+    //         ASSERT(false);
+    //     }
+    // }
 
-    for (auto p_entity_data : ordered_entity_list) {
-        EntityMemory& ent_mem = m_entity_registry.at(p_entity_data->UUID);
-        if(ent_mem.ingested_flags.to_delete) {
-            // We free after all other mutations and IBO rewrites are complete.
-            // This also lets us ignore everything.
-            continue;
-        }
+    // for (auto p_entity_data : ordered_entity_list) {
+    //     EntityMemory& ent_mem = m_entity_registry.at(p_entity_data->UUID);
+    //     if(ent_mem.ingested_flags.to_delete) {
+    //         // We free after all other mutations and IBO rewrites are complete.
+    //         // This also lets us ignore everything.
+    //         continue;
+    //     }
 
-        // Perform all data mutations here.
-        if(ent_mem.ingested_flags.size_changed || ent_mem.ingested_flags.verts_changed) {
-            if(ent_mem.ingested_flags.new_entity) {
-                register_new_entity(*p_entity_data);
-            } else {
-                update_entity(*p_entity_data);
-            }
-        }
+    //     // Perform all data mutations here.
+    //     if(ent_mem.ingested_flags.size_changed || ent_mem.ingested_flags.verts_changed) {
+    //         if(ent_mem.ingested_flags.new_entity) {
+    //             register_new_entity(*p_entity_data);
+    //         } else {
+    //             update_entity(*p_entity_data);
+    //         }
+    //     }
 
-        // Perform all visibility toggles here.
-        if (ent_mem.ingested_flags.next_vis_state != std::nullopt){
-            ent_mem.visible = (bool)ent_mem.ingested_flags.next_vis_state;
-        }
-    }
+    //     // Perform all visibility toggles here.
+    //     if (ent_mem.ingested_flags.next_vis_state != std::nullopt){
+    //         ent_mem.visible = (bool)ent_mem.ingested_flags.next_vis_state;
+    //     }
+    // }
 
-    if (m_IBO_dirty) { // Skip if no size mutations happened
-        int ibo_size = 0;
-        m_IBO_mirror.clear(); // First, delete the current IBO mirror.
-         // Loop through all entities and only calculate IBO if visible flag.
-        for (auto& [uuid, ent_mem] : m_entity_registry) {
-            if (ent_mem.visible){
-                ibo_size = ibo_size + ent_mem.cached_ibo_segment.size();
-            }
-        }
+    // if (m_IBO_dirty) { // Skip if no size mutations happened
+    //     int ibo_size = 0;
+    //     m_IBO_mirror.clear(); // First, delete the current IBO mirror.
+    //      // Loop through all entities and only calculate IBO if visible flag.
+    //     for (auto& [uuid, ent_mem] : m_entity_registry) {
+    //         if (ent_mem.visible){
+    //             ibo_size = ibo_size + ent_mem.cached_ibo_segment.size();
+    //         }
+    //     }
 
-        m_IBO_mirror.resize(ibo_size);
-        for (auto& [uuid, ent_mem] : m_entity_registry) {
-            if (ent_mem.visible) {
-                m_IBO_mirror.insert(m_IBO_mirror.end(), ent_mem.cached_ibo_segment.begin(), ent_mem.cached_ibo_segment.end());
-            }
-        }
-    }
+    //     m_IBO_mirror.resize(ibo_size);
+    //     for (auto& [uuid, ent_mem] : m_entity_registry) {
+    //         if (ent_mem.visible) {
+    //             m_IBO_mirror.insert(m_IBO_mirror.end(), ent_mem.cached_ibo_segment.begin(), ent_mem.cached_ibo_segment.end());
+    //         }
+    //     }
+    // }
 
-    for (auto ent_dat : to_delete_list) {
-        delete_entity(*ent_dat);
-    }
+    // for (auto ent_dat : to_delete_list) {
+    //     delete_entity(*ent_dat);
+    // }
 }
 
 int Renderer::acknowledge_memory_allocation(const EntityData& entity) {

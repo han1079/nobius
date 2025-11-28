@@ -1,9 +1,6 @@
 #include <updaters/world_updater.h>
 #include <updaters/orchestrator.h>
 
-// Baseline Constructor - initialize with a default world state object
-WorldUpdater::WorldUpdater(WorldState& state) : m_world_data(state) {}
-
 bool WorldUpdater::init() {
     return true;
 }

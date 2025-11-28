@@ -217,9 +217,8 @@ inline std::string string_from_flag(const std::unordered_map<std::string, flag_t
 class Orchestrator;
 class Renderer;
 class WorldUpdater;
-class EventIngester;
+class InputSystem;
 class ImGuiUpdater;
 class ModeUpdater;
-class WorldState;
 class SystemState;
 class WindowState;
