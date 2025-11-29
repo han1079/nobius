@@ -15,6 +15,10 @@ struct TimeStampedValue {
             timestamp = time;
         }
     }
+
+    inline void update_dT(const T& new_value, float dT) {
+        update(new_value, timestamp + dT);
+    }
     
     inline void reset_changes() {
         changes_since_poll = 0;

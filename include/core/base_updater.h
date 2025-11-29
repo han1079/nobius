@@ -10,7 +10,7 @@
 
 class BaseUpdater {
 private:
-    std::string m_layer_name;
+    std::string m_name;
 public:
     BaseUpdater();
     virtual ~BaseUpdater();
@@ -19,6 +19,7 @@ protected:
     virtual bool shutdown();
     virtual bool update_state_via_event(EngineEvent &event);
     virtual bool update_state_via_dT(float dT);
+    virtual bool submit_render_commands();
 };
 
 

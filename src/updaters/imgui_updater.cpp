@@ -1,71 +1,25 @@
-#include "SDL_events.h"
-#include "core/common.h"
-#include "imgui.h"
 #include <updaters/imgui_updater.h>
 #include <iostream>
 #include <updaters/orchestrator.h>
 
 #define STYLEPATH (PROJECT_SOURCE_DIR + std::string("/configs/imgui_style_default.json")).c_str()
 
-ImGuiUpdater::ImGuiUpdater(ImGuiState& state) : m_cfg(state) {}
-
-ImGuiUpdater::~ImGuiUpdater() {
-    // Destructor implementation
-}
 
 bool ImGuiUpdater::init() {
-   
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-    {
-        printf("Error: %s\n", SDL_GetError());
-        return false;
-    }
-
-    // TODO: Defend against mangled data entries
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, m_cfg.sdl_flags);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, m_cfg.sdl_profile_mask);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, m_cfg.sdl_major_version);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, m_cfg.sdl_minor_version);
-
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, m_cfg.sdl_double_buffer);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, m_cfg.sdl_depth_size);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, m_cfg.sdl_stencil_size);
-
-    main_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(0); 
-
-    win_width = static_cast<int>(m_cfg.sdl_window_width * m_cfg.imgui_scale);
-    win_height = static_cast<int>(m_cfg.sdl_window_height * m_cfg.imgui_scale);
-
-    window = SDL_CreateWindow(m_cfg.sdl_window_title.c_str(),
-                              SDL_WINDOWPOS_CENTERED,
-                              SDL_WINDOWPOS_CENTERED,
-                              win_width, 
-                              win_height, 
-                              (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI));
-    if (window == nullptr)
-    {
-        printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
-        return false;
-    }
-
-    gl_context = SDL_GL_CreateContext(window);
-    if (gl_context == nullptr)
-    {
-        printf("Error: SDL_GL_CreateContext(): %s\n", SDL_GetError());
-        return false;
-    }
-
-    SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(0); // Disable vsync, since it messes with window occulsion handling.
 
     // Setup Dear ImGui context
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= m_cfg.imgui_config_flags;
-    // m_cfg.load_from_json(std::string(STYLEPATH));
+    ImGuiConfigFlags imgui_config_flags = (ImGuiConfigFlags_NavEnableKeyboard | 
+                                            ImGuiConfigFlags_DockingEnable);
+    io.ConfigFlags |= imgui_config_flags;
 
-    // Setup scaling
-    style = ImGui::GetStyle();
+    load_imgui_style_from_json(STYLEPATH);
+
+    ImGuiStyle style = ImGui::GetStyle();
+
+    float main_scale = Orchestrator::get()->get_renderer().scale;
+
     style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
     style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
     io.ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
@@ -73,8 +27,6 @@ bool ImGuiUpdater::init() {
     std::string path = PROJECT_SOURCE_DIR + std::string("/assets/Roboto/static/Roboto-Light.ttf");
     ImFont* roboto = io.Fonts->AddFontFromFileTTF(path.c_str(), 12);
     io.FontDefault = roboto;
-
-    std::cout << "\r" << &style << std::flush;
     
     io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
     ImGui::StyleColorsDark();
@@ -87,12 +39,19 @@ bool ImGuiUpdater::init() {
     //}
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
-    ImGui_ImplOpenGL3_Init(m_cfg.glsl_version.c_str());
+    SDL_Window* window = Orchestrator::get()->get_renderer().sdl_window;
+    SDL_GLContext gl_context = Orchestrator::get()->get_renderer().gl_context; 
 
+    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+    ImGui_ImplOpenGL3_Init("#version 130");
+
+    // Renders a warmup frame to ensure style/font settings are applied
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
-
+    ImGui::NewFrame();
+    ImGui::Begin("Warmup");
+    ImGui::End();
+    ImGui::Render();
 
     return true;
 }
@@ -103,146 +62,114 @@ bool ImGuiUpdater::update_state_via_event(EngineEvent &event) {
     return true;
 }
 
-void ImGuiUpdater::build_imgui_frame() {
-    /* Build the ImGui frame
+bool ImGuiUpdater::update_state_via_dT(float dT) {
+    // Synchronize ImGui window states with InputSystem's timestamped values 
+    auto input = Orchestrator::get()->get_input();
+    input.sidebar_x.update_dT(sidebar_state.pos.x, dT);
+    input.sidebar_y.update_dT(sidebar_state.pos.y, dT);
+    input.sidebar_width.update_dT(sidebar_state.size.x, dT);
+    input.sidebar_height.update_dT(sidebar_state.size.y, dT);
 
-    Bottom Row -> Slider for Timeline 
-    Top Row -> Buttons for Play, Pause, Stop
-    Right Side -> Info Panel with Input Box, Text Box, Checkbox
-    Left Side -> Main Viewport with Rendered Content
-    */
+    input.bottom_x.update_dT(bottom_panel_state.pos.x, dT);
+    input.bottom_y.update_dT(bottom_panel_state.pos.y, dT);
+    input.bottom_width.update_dT(bottom_panel_state.size.x, dT);
+    input.bottom_height.update_dT(bottom_panel_state.size.y, dT);
 
-    bool* sidebar = &m_cfg.sidebar_visible;
-    bool* bottom = &m_cfg.bottom_visible;
-    bool* ribbon = &m_cfg.ribbon_visible;
-    bool* viewport = &m_cfg.viewport_visible;
+    input.ribbon_x.update_dT(ribbon_state.pos.x, dT);
+    input.ribbon_y.update_dT(ribbon_state.pos.y, dT);
+    input.ribbon_width.update_dT(ribbon_state.size.x, dT);
+    input.ribbon_height.update_dT(ribbon_state.size.y, dT);
 
+    input.viewport_x.update_dT(main_window_state.pos.x, dT);
+    input.viewport_y.update_dT(main_window_state.pos.y, dT);
+    input.viewport_width.update_dT(main_window_state.size.x, dT);
+    input.viewport_height.update_dT(main_window_state.size.y, dT);
+
+    return true;
+}
+
+bool ImGuiUpdater::submit_render_commands() {
+    auto& renderer = Orchestrator::get()->get_renderer();
+
+    RenderCommand build_sidebar = {RenderCommandType::ImGuiWindow, [this](){this->build_sidebar();}, "build_sidebar"};
+    RenderCommand build_bottom_panel = {RenderCommandType::ImGuiWindow, [this](){this->build_bottom_panel();}, "build_bottom_panel"};
+    RenderCommand build_ribbon = {RenderCommandType::ImGuiWindow, [this](){this->build_ribbon();}, "build_ribbon"};
+    RenderCommand build_main_window = {RenderCommandType::ImGuiWindow, [this](){this->build_main_window();}, "build_main_window"};
+    RenderCommand build_debug_console = {RenderCommandType::ImGuiWindow, [this](){this->build_debug_console();}, "build_debug_console"};
+
+    renderer.submit_render_request(build_sidebar);
+    renderer.submit_render_request(build_bottom_panel);
+    renderer.submit_render_request(build_ribbon);
+    renderer.submit_render_request(build_main_window);
+    renderer.submit_render_request(build_debug_console);
+
+    return true;
+}
+
+void ImGuiUpdater::build_sidebar() {
 
     ImGuiIO& io = ImGui::GetIO();
-    /*Manual Configuration of all of the windows*/
-
-
-
-
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-    ImGui::NewFrame();
-    ImGui::DockSpaceOverViewport();
-
     ImVec2 full_window_size = io.DisplaySize;
-    
-    /*
-    _______________________
-    |______________|      | <- Ribbon (0,0) and (w * 1, h * 0.1)
-    |              |      |
-    |              |      | <- Main Viewport      | Sidebar
-    |              |      |    (0, h * 0.1)       | (w * 0.7, h * 0)
-    |              |      |    (w * 0.7, h * 0.8) | (w * 0.3, h * 1)
-    |______________|      |
-    |______________|______| <- Bottom (0, h * 0.9) and (w * 1, h * 0.1)
-    
-    
-    
-    */
-
-    // Main viewport takes up left 70% of the window
-    //ImGui::ShowStyleEditor(&style);
-    auto& input_system = Orchestrator::get()->get_input();
-
-    ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Main Window", viewport);
-    ImVec2 pos = ImGui::GetWindowPos();
-    ImVec2 size = ImGui::GetWindowSize();
-    input_system.update_window_params(pos.x, pos.y, size.x, size.y, "Main Window");
-    m_cfg.update_viewport_info(pos.x, pos.y, size.x, size.y);
-    ImGui::End();
 
     // Sidebar takes up all of the right side
     // and extends to 30% of the way along the x side on initial layout
     ImGui::SetNextWindowPos(ImVec2(full_window_size.x * 0.7, 0), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.3, full_window_size.y), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Sidebar", sidebar);
-    pos = ImGui::GetWindowPos();
-    size = ImGui::GetWindowSize();
-    input_system.update_window_params(pos.x, pos.y, size.x, size.y, "Sidebar");
+    ImGui::Begin(sidebar_state.texts["name"].c_str(), &sidebar_state.visible);
+    sidebar_state.pos = ImGui::GetWindowPos();
+    sidebar_state.size = ImGui::GetWindowSize();
     ImGui::Text("Info Panel");
     ImGui::Text("%s", PROJECT_SOURCE_DIR);
-    if (ImGui::Button("Save Style")) {
-        m_cfg.save_imgui_style(STYLEPATH);
-    }
-    ImGui::Text("Event Count: %d", m_cfg.event_count);
     ImGui::End();
+    
+}
+
+void ImGuiUpdater::build_bottom_panel() {
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 full_window_size = io.DisplaySize;
 
     ImGui::SetNextWindowPos(ImVec2(0, full_window_size.y * 0.9), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x, full_window_size.y * 0.1), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Bottom Panel", bottom);
-    pos = ImGui::GetWindowPos();
-    size = ImGui::GetWindowSize();
-    input_system.update_window_params(pos.x, pos.y, size.x, size.y, "Bottom Panel");
+    ImGui::Begin(bottom_panel_state.texts["name"].c_str(), &bottom_panel_state.visible);
+    bottom_panel_state.pos = ImGui::GetWindowPos();
+    bottom_panel_state.size = ImGui::GetWindowSize();
     ImGui::Text("Timeline Slider Here");
     ImGui::End();
+    
+}
+
+void ImGuiUpdater::build_ribbon() {
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 full_window_size = io.DisplaySize;
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x, full_window_size.y * 0.1), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Ribbon", ribbon);
-    pos = ImGui::GetWindowPos();
-    size = ImGui::GetWindowSize();
-    input_system.update_window_params(pos.x, pos.y, size.x, size.y, "Ribbon");
+    ImGui::Begin(ribbon_state.texts["name"].c_str(), &ribbon_state.visible);
+    ribbon_state.pos = ImGui::GetWindowPos();
+    ribbon_state.size = ImGui::GetWindowSize();
     ImGui::Text("Play | Pause | Stop Buttons Here");
     ImGui::End();
     
-    // Variable Monitor Window
-    static bool show_variable_monitor = true;
-    if (show_variable_monitor) {
-        DebugConsole::getInstance().render(&show_variable_monitor);
-    }
-    
-    // ImGui::Begin("Style", viewport);
-
-    // ImGui::ShowStyleEditor(&style);
-    // ImGui::End();
 }
 
-bool ImGuiUpdater::update_state_via_dT(float dT) {
-    // Currently no returns.
-    return true;
-}
+void ImGuiUpdater::build_main_window() {
 
-bool ImGuiUpdater::draw_gui() {
-
-    static int frame_count = 0;
-    frame_count++;
-    static bool registered_debugs = false;
-
-    if(!registered_debugs) {
-        auto& debug = DebugConsole::getInstance();
-        
-        debug.hookVariable("frame_count", frame_count);
-        registered_debugs = true;
-    }
-    
-    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
-    {
-        SDL_Delay(10);
-        return true;
-    }
-    
-    build_imgui_frame();
-    
-    
     ImGuiIO& io = ImGui::GetIO();
-    ImGui::Render();
+    ImVec2 full_window_size = io.DisplaySize;
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
+    ImGui::Begin(main_window_state.texts["name"].c_str(), &main_window_state.visible);
+    main_window_state.pos = ImGui::GetWindowPos();
+    main_window_state.size = ImGui::GetWindowSize();
+    ImGui::End();
     
-    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-    glClearColor(m_cfg.gl_clear_color.r * m_cfg.gl_clear_color.a, 
-                 m_cfg.gl_clear_color.g * m_cfg.gl_clear_color.a, 
-                 m_cfg.gl_clear_color.b * m_cfg.gl_clear_color.a, 
-                 m_cfg.gl_clear_color.a);
-    glClear(GL_COLOR_BUFFER_BIT);
-    
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    return true;
+}
+
+void ImGuiUpdater::build_debug_console() {
+    DebugConsole::getInstance().render(&debug_console_state.visible);
 }
 
 bool ImGuiUpdater::shutdown() {
@@ -251,14 +178,11 @@ bool ImGuiUpdater::shutdown() {
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(gl_context);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
     return true;
-
 }
 
-nlohmann::json read_json_from_file(const std::string& file_path) {
-    nlohmann::json json = nlohmann::json::parse(file_path);
-    return json;
+ImGuiUpdater::~ImGuiUpdater() {
+    shutdown();
 }
+
+

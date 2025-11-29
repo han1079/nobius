@@ -2,15 +2,7 @@
 #include <pch.h>
 #include <core/common.h>
 #include <core/entity.h>
-#include <state/imgui_state.h>
-#include <random>
-#include <cstdint>
-#include <queue>
-#include <algorithm>
-#include <vector>
-#include <unordered_map>
-#include <memory>
-#include <optional>
+#include <core/vertex_allocator.h>
 
 
 
@@ -47,163 +39,83 @@ struct RichVertexAttr {
     static constexpr int FILLED_OFFSET = THICKNESS_OFFSET + THICKNESS_SIZE;
 };
 
-enum class alloc_tags {
-    INIT, ACK, ALLOC, FREE, SHRINK, GROW, MISMATCH
+enum class RenderCommandType {
+    None,
+    Entity,
+    ImGuiWindow
 };
 
-struct FragmentInterval {
-    unsigned int start;
-    unsigned int size;
-    alloc_tags status = alloc_tags::INIT;
-};
-
-struct EntityMemory {
-    std::vector<FragmentInterval> intervals;
-    unsigned int total_size = 0;
-    unsigned int first_start = 0;
-    unsigned int last_start = 0;
-    unsigned int total_intervals = 0;
-
-    bool visible = true;
-    std::vector<int> cached_ibo_segment = {};
-    
-    struct ingested_flags {
-        bool to_delete = false;
-        std::optional<bool> next_vis_state = std::nullopt;
-        bool size_changed = false;
-        bool verts_changed = false;
-        int first_seen_idx = -1;
-        bool new_entity = false;
-    } ingested_flags;
-
-    void reset_flags() { ingested_flags = {}; }
-};
-
-class MemoryList {
-public:
-    struct MemoryFragment {
-        unsigned int start = 0;
-        unsigned int size = 0;
-        bool free = true;
-        MemoryFragment* next = nullptr;
-        MemoryFragment* prev = nullptr;
-    };
-
-    struct MemoryIterator {
-        MemoryIterator(MemoryFragment* vf, MemoryList* o) : viewed_fragment(vf), owner(o) {}
-        
-        MemoryFragment* viewed_fragment;
-        MemoryList* owner;
-
-        MemoryIterator& operator++();
-        MemoryIterator operator++(int);
-        MemoryIterator& operator--();
-        MemoryIterator operator--(int);
-        MemoryFragment& operator*() const { return *viewed_fragment; }
-        MemoryFragment* operator->() const { return viewed_fragment; }
-        bool operator!=(const MemoryIterator& other) { return (viewed_fragment != other.viewed_fragment); }
-        bool operator==(const MemoryIterator& other) { return (viewed_fragment == other.viewed_fragment); }
-    };
-
-    explicit MemoryList(unsigned int total_size);
-    ~MemoryList();
-
-    // The only variables that this class owns.
-    MemoryFragment* head;
-    MemoryFragment* tail;
-
-    // Iterator functions
-    MemoryIterator begin() { return MemoryIterator(head, this); }
-    MemoryIterator end() { return MemoryIterator(nullptr, this); }
-    MemoryIterator iterate_from(MemoryFragment* n) { return MemoryIterator(n, this); }
-
-    // Linked list / memory allocator specific functions
-    void clear_fragments();
-    [[nodiscard]] bool adjacency_check(MemoryFragment* prev, MemoryFragment* next);
-    bool allocate_into(MemoryFragment* target_fragment, unsigned int requested_size);
-    bool free_block(MemoryFragment* target_fragment);
-    bool shrink_allocated_block(MemoryFragment* target_fragment, unsigned int new_size);
-    bool grow_allocated_block(MemoryFragment* target_fragment, unsigned int new_size);
-    bool coalesce(MemoryFragment* target_fragment);
-};
-
-class MemoryManager {
-public:
-    struct MemoryStats {
-        unsigned int n;
-        unsigned int size;
-        float mu;
-        float M2;
-
-        void add(unsigned int d_size);
-        void remove(unsigned int d_size);
-        float get_variance();
-        float get_entropy();
-        bool is_empty();
-    };
-
-    MemoryManager(unsigned int size);
-    ~MemoryManager() = default;
-
-    unsigned int total_size;
-    MemoryList memory_list;
-    std::vector<RichVertex> gpu_memory_heap;
-    MemoryStats alloc_stats;
-    MemoryStats free_stats;
-
-    void write_vertex_to_heap_idx(unsigned int heap_index, const RichVertex& vertex);
-
-    using MemoryFragment = MemoryList::MemoryFragment;
-
-    void free_memory(EntityMemory& container, int size = -1);
-    void resize_memory(EntityMemory& container, unsigned int new_size);
-    void allocate_memory(unsigned int num, EntityMemory& container);
-    void allocate_using_append(unsigned int num, EntityMemory& container);
-    void allocate_using_walk(unsigned int num, EntityMemory& container);
-    float evaluate_alloc_strategy(int proposed_memory_delta);
-    bool managed_alloc(MemoryFragment* target, unsigned int size);
-    bool managed_grow(MemoryFragment* target, unsigned int new_size);
-    bool managed_shrink(MemoryFragment* target, unsigned int new_size);
-    bool managed_free(MemoryFragment* target);
-
-private:
-    float ENTROPY_THRESHOLD = 1.0;
-    static FragmentInterval get_memory_interval(const MemoryList::MemoryFragment& fragment);
-    MemoryList::MemoryFragment* walk_to(unsigned int target);
-    MemoryList::MemoryFragment* start_from_walk_to(MemoryList::MemoryFragment* init, unsigned int target, bool forward = true);
+struct RenderCommand {
+    RenderCommandType type = RenderCommandType::None;
+    std::function<void()> execute_func = {};
+    std::string debug_name = "";
 };
 
 class Renderer {
 public:
     Renderer();
-    ~Renderer();
 
+    Renderer(const Renderer&) = delete;
+    Renderer& operator=(const Renderer&) = delete;
+
+    Renderer(Renderer&&) = default;
+    Renderer& operator=(Renderer&&) = default;
+
+    ~Renderer() { cleanup(); };
+
+public:
+    // SDL Handlers
+    SDL_Window* sdl_window;
+    SDL_GLContext gl_context;
+    float scale;
+    const std::string window_name = "PLACEHOLDER_TITLE";
+
+public:
     // OpenGL resource IDs
     unsigned int m_VAO_ID{};
     unsigned int m_VBO_ID{};
     unsigned int m_IBO_ID{};
 
-    // Entity management
-    std::unordered_map<uint64_t, EntityMemory> m_entity_registry{};
-    std::vector<unsigned int> m_IBO_mirror{};
-    bool m_IBO_dirty = false;
-    MemoryManager memory_manager;
-
+public:
     // Public interface
-    bool init();
-    void start_frame();
-    void render_frame();
-    void end_frame();
-    void cleanup();
 
-    // Entity management
-    void register_new_entity(const EntityData& entity);
-    void update_entity(const EntityData& entity);
-    void delete_entity(const EntityData& entity);
+    void init();
+    void render();
+    void submit_render_request(RenderCommand request);
+
+    std::queue<RenderCommand>& get_command_queue() { return command_queue; }
 
 private:
+
     void set_up_gpu_buffers();
-    void process_request_buffer();
-    int acknowledge_memory_allocation(const EntityData& entity);
-    int get_offset_index(int local_vertex_idx, std::vector<FragmentInterval> intervals);
+
+    //TO IMPLEMENT - Helper functions to register and deregister shader classes.
+    void add_shader();
+    void delete_shader();
+    //TO IMPLEMENT - Needs an arg to specify which shader. Shader itself takes care of binding
+    void use_shader();
+
+    //TO IMPLEMENT - Check Vertex Allocator for dirty regions. Gl Sub Buffer reload those regions
+    void update_vertex_buffer();
+
+
+    //TO IMPLEMENT - Submit new draw - gets a "batch of indices" and a "shader with config" as a command. This is 
+    //run as one of the branches of the process() command
+    void submit_draw_call();
+
+private:
+
+    bool start_frame();
+    void process_render_submissions();
+    void process(RenderCommand& cmd);
+    void end_frame(bool should_swap);
+    void cleanup();
+
+    VertexAllocator& get_vertex_allocator();
+
+private:
+
+    glm::vec4 gl_clear_color = {0.45f, 0.55f, 0.60f, 1.00f};
+    inline static std::queue<RenderCommand> command_queue;
+
 };

@@ -3,45 +3,69 @@
 #include <pch.h>
 #include <core/common.h>
 #include <core/base_updater.h>
-#include <state/imgui_state.h>
+#include <utils/imgui_style_loader.h>
 
+struct ImGuiWidgetState {
+    bool visible = false;
+    ImVec2 pos = {0,0};
+    ImVec2 size = {0,0};
+    std::unordered_map<std::string, std::string> texts = {};
+};
 
 class ImGuiUpdater : public BaseUpdater {
 public:
 
     
-    ImGuiUpdater() = delete; // ImGuiUpdater MUST have a state in order to be created.
-    ImGuiUpdater(ImGuiState& state);
+    ImGuiUpdater() : sidebar_state(), 
+        bottom_panel_state(), 
+        ribbon_state(), 
+        main_window_state(),
+        debug_console_state()
+    {
+        sidebar_state.visible = true;
+        sidebar_state.texts["name"] = "Sidebar";
+
+        bottom_panel_state.visible = true;
+        bottom_panel_state.texts["name"] = "Bottom Panel";
+        
+        ribbon_state.visible = true;
+        ribbon_state.texts["name"] = "Ribbon";
+
+        main_window_state.visible = true;
+        main_window_state.texts["name"] = "Main Window";
+
+        debug_console_state.visible = true;
+        debug_console_state.texts["name"] = "Debug Console";
+    }; 
     ~ImGuiUpdater();
     friend class Orchestrator;
     
     // Getter for window access
-    SDL_Window* get_window() const { return window; }
 
-private:
-    ImGuiState& m_cfg;
+public:
 
-    // Basic Window Configuration Data
-    
-    int win_width;
-    int win_height;
-    SDL_Window* window;
-    SDL_GLContext gl_context;
-    float main_scale;
+    ImGuiWidgetState sidebar_state;
 
+    ImGuiWidgetState bottom_panel_state;
+ 
+    ImGuiWidgetState ribbon_state;
 
-    // Stuff for debugging imgui
-    ImGuiStyle style;
+    ImGuiWidgetState main_window_state;
+
+    ImGuiWidgetState debug_console_state;
+
 protected:
 
     bool init() override;
     bool shutdown() override;
     bool update_state_via_event(EngineEvent &event) override;
     bool update_state_via_dT(float dT) override;
+    bool submit_render_commands() override;
 
 private:
-
-    void build_imgui_frame();
-    void initialize_imgui_frame();
-    bool draw_gui();
+    void build_main_window();
+    void build_sidebar();
+    void build_ribbon();
+    void build_bottom_panel();
+    void build_debug_console();
 };

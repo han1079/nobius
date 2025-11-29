@@ -222,3 +222,4 @@ class ImGuiUpdater;
 class ModeUpdater;
 class SystemState;
 class WindowState;
+class RenderCommandBuffer;

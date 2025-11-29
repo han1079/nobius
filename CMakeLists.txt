@@ -61,7 +61,6 @@ set(CORE_BUILD ${CMAKE_SOURCE_DIR}/src/core/base_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/world_updater.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/input_system.cpp
                 ${CMAKE_SOURCE_DIR}/src/updaters/imgui_updater.cpp
-                ${CMAKE_SOURCE_DIR}/src/state/imgui_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/renderer.cpp
                 ${CMAKE_SOURCE_DIR}/src/utils/debug_console.cpp)
 

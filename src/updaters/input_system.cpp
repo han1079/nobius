@@ -13,6 +13,10 @@ InputSystem::InputSystem()
     }
     DEBUG_HOOK_FUNCTION_NO_TIMER();
     DEBUG_HOOK_VAR_AS(hovered_element_name, "HOVERED_UI_ELEMENT_NAME");
+    DEBUG_HOOK_VAR_AS(mouse_x.value, "MOUSE_X");
+    DEBUG_HOOK_VAR_AS(mouse_y.value, "MOUSE_Y");
+    DEBUG_HOOK_VAR_AS(mouse_x_relative.value, "MOUSE_X_RELATIVE");
+    DEBUG_HOOK_VAR_AS(mouse_y_relative.value, "MOUSE_Y_RELATIVE");
 }
 
 void InputSystem::update_time(float timestamp) {
@@ -54,7 +58,6 @@ void InputSystem::update_window_hover() {
     }
 
     if (hovered_window) {
-        std::cout << "Hovered window: " << window_name.c_str() << std::endl; 
         if (strcmp(window_name.c_str(), "Sidebar") == 0) {
             hovered_element = HoveredUIElement::SIDEBAR;
             hovered_element_name = HoveredUIElementNames[HoveredUIElement::SIDEBAR];
@@ -73,7 +76,6 @@ void InputSystem::update_window_hover() {
         }
         
     } else {
-        std::cout << "Hovered window: None" << std::endl;
         hovered_element = HoveredUIElement::NONE;
         hovered_element_name = HoveredUIElementNames[HoveredUIElement::NONE];
     }

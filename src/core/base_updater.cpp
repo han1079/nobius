@@ -9,20 +9,25 @@ BaseUpdater::~BaseUpdater() = default;
 // Virtual function implementations
 bool BaseUpdater::init() {
     // Default implementation - can be overridden by derived classes
-    return true;
+    return false;
 }
 
 bool BaseUpdater::shutdown() {
     // Default implementation - can be overridden by derived classes
-    return true;
+    return false;
 }
 
 bool BaseUpdater::update_state_via_event(EngineEvent &event) {
     // Default implementation - can be overridden by derived classes
-    return true;
+    return false;
 }
 
 bool BaseUpdater::update_state_via_dT(float dT) {
     // Default implementation - can be overridden by derived classes
-    return true;
+    return false;
+}
+
+bool BaseUpdater::submit_render_commands() {
+    // Default implementation - can be overridden by derived classes
+    return false;
 }

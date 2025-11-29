@@ -7,18 +7,12 @@ class InputSystem {
 public:
     InputSystem();
     ~InputSystem() = default;
-
-private:
+public:
     // UI Layout tracking
     TimeStampedFloat sidebar_x, sidebar_y, sidebar_width, sidebar_height;
     TimeStampedFloat bottom_x, bottom_y, bottom_width, bottom_height;
     TimeStampedFloat ribbon_x, ribbon_y, ribbon_width, ribbon_height;
     TimeStampedFloat viewport_x, viewport_y, viewport_width, viewport_height;
-
-    HoveredUIElement hovered_element = HoveredUIElement::NONE;
-    std::string hovered_element_name = "NONE";
-    float latest_time = 0.0f;
-
     // Input state
     TimeStampedBool ctrl_state, shift_state, alt_state;
     TimeStampedBool mouse_left_state, mouse_right_state, mouse_middle_state;
@@ -26,6 +20,13 @@ private:
     TimeStampedFloat mouse_x, mouse_y;
     TimeStampedFloat mouse_x_relative, mouse_y_relative;
     TimeStampedBool key_states[SDL_NUM_SCANCODES];
+
+private:
+
+    HoveredUIElement hovered_element = HoveredUIElement::NONE;
+    std::string hovered_element_name = "NONE";
+    float latest_time = 0.0f;
+
 
     // Mode state (consolidated from ModeState)
     uint32_t user_mode = (uint32_t)UserMode::MODE_SELECT;

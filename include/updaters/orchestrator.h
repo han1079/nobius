@@ -3,11 +3,11 @@
 #include <pch.h>
 #include <core/common.h>
 
-#include <state/imgui_state.h>
 
 #include <updaters/world_updater.h>
 #include <updaters/imgui_updater.h>
 #include <updaters/input_system.h>
+#include <core/vertex_allocator.h>
 
 #include <core/renderer.h>
 
@@ -34,12 +34,14 @@ public:
     void shutdown();
     
     // Getter methods
-    const ImGuiState& get_imgui_state() const { return m_imgui_state; }
     const WorldUpdater& get_world() const { return m_world_updater; }
     const InputSystem& get_input() const { return m_input_system; }
+    const Renderer& get_renderer() const { return m_renderer;}
     
     // Mutable getters for systems that need to be modified
     InputSystem& get_input() { return m_input_system; }
+    VertexAllocator& get_vertex_allocator() { return m_vertex_allocator; }
+    Renderer& get_renderer() { return m_renderer; }
     
     // Convenience accessors for common operations
     glm::vec2 get_mouse_position() const { return m_input_system.get_mouse_position(); }
@@ -59,17 +61,6 @@ private:
     // includes Orchestrator.h or needs to access this object. 
     inline static Orchestrator* m_orchestrator_ptr = nullptr;
 
-    /*The Orchestrator owns the following state trackers
-     *
-     * ImGuiState - Window configuration, shader code strings, etc
-     *
-     * Note: InputSystem now contains all input/mode state
-     * Note: WorldUpdater now contains its own world state
-     *
-     * */
-
-    ImGuiState m_imgui_state;
-
     /*The Orchestrator owns the following control objects:
      * 
      * InputSystem (was EventIngester + ModeUpdater)
@@ -82,6 +73,7 @@ private:
     ImGuiUpdater m_imgui_updater;
 
     Renderer m_renderer;
+    VertexAllocator m_vertex_allocator;
     friend class Renderer;
 };
 
