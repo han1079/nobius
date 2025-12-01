@@ -21,4 +21,5 @@
 #include <string>
 #include <variant>
 #include <unordered_map>
+#include <set>
 #include <utils/debug_console.h>

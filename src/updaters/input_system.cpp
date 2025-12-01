@@ -17,6 +17,9 @@ InputSystem::InputSystem()
     DEBUG_HOOK_VAR_AS(mouse_y.value, "MOUSE_Y");
     DEBUG_HOOK_VAR_AS(mouse_x_relative.value, "MOUSE_X_RELATIVE");
     DEBUG_HOOK_VAR_AS(mouse_y_relative.value, "MOUSE_Y_RELATIVE");
+    DEBUG_HOOK_VAR_AS(user_mode, "USER_MODE_FLAGS");
+    DEBUG_HOOK_VAR_AS(key_states[SDL_SCANCODE_SPACE].value, "KEY_SPACE_STATE");
+    DEBUG_HOOK_VAR_AS(space_just_true, "KEY_SPACE_JUST_TRUE");
 }
 
 void InputSystem::update_time(float timestamp) {
@@ -87,9 +90,11 @@ EngineEvent InputSystem::ingest_event(SDL_Event& e) {
 
     static std::string event_type_dbg;
     static std::string capture_state;
+    static int SDL_Scancode_dbg;
     DEBUG_HOOK_FUNCTION_NO_TIMER();
     DEBUG_HOOK_VAR_AS(event_type_dbg, "SDL_EVENT_TYPE");
     DEBUG_HOOK_VAR_AS(capture_state, "SDL_EVENT_CAPTURED");
+    DEBUG_HOOK_VAR_AS(SDL_Scancode_dbg, "SDL_SCANCODE_NAME");
 
     ImGui_ImplSDL2_ProcessEvent(&e);
     if (e.type == SDL_QUIT || (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_CLOSE)){
@@ -168,14 +173,16 @@ EngineEvent InputSystem::ingest_event(SDL_Event& e) {
         event.wheel_direction_up = (e.wheel.y > 0);
         break;
     case(SDL_KEYDOWN) :
-        event_type_dbg = "MOUSEKEYDOWN";
+        event_type_dbg = "KEYDOWN";
         event.type = EngineEventType::KeyDown;
         event.key_info = e.key.keysym;
+        SDL_Scancode_dbg = event.key_info.scancode;
         break;
     case(SDL_KEYUP) :
-        event_type_dbg = "MOUSEKEYUP";
+        event_type_dbg = "KEYUP";
         event.type = EngineEventType::KeyUp;
         event.key_info = e.key.keysym;
+        SDL_Scancode_dbg = event.key_info.scancode;
         break;
     }
 
@@ -275,48 +282,49 @@ void InputSystem::update_mouse(float new_mouse_x, float new_mouse_y, float times
     mouse_y.update(new_mouse_y, timestamp);
 }
 
-void InputSystem::reset_changes() {
+void InputSystem::save_accumulated_changes() {
     // Reset all change counters after SDL_PollEvents is complete
-    ctrl_state.reset_changes();
-    shift_state.reset_changes();
-    alt_state.reset_changes();
+    ctrl_state.save_accumulated_changes();
+    shift_state.save_accumulated_changes();
+    alt_state.save_accumulated_changes();
     
-    mouse_left_state.reset_changes();
-    mouse_right_state.reset_changes();
-    mouse_middle_state.reset_changes();
+    mouse_left_state.save_accumulated_changes();
+    mouse_right_state.save_accumulated_changes();
+    mouse_middle_state.save_accumulated_changes();
     
-    mouse_wheel_dy.reset_changes();
-    mouse_x.reset_changes();
-    mouse_y.reset_changes();
-    mouse_x_relative.reset_changes();
-    mouse_y_relative.reset_changes();
+    mouse_wheel_dy.save_accumulated_changes();
+    mouse_x.save_accumulated_changes();
+    mouse_y.save_accumulated_changes();
+    mouse_x_relative.save_accumulated_changes();
+    mouse_y_relative.save_accumulated_changes();
     
     // Reset all individual key states
     for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
-        key_states[i].reset_changes();
+        key_states[i].save_accumulated_changes();
     }
     
     // Reset UI element position tracking
-    sidebar_x.reset_changes();
-    sidebar_y.reset_changes();
-    sidebar_width.reset_changes();
-    sidebar_height.reset_changes();
+    sidebar_x.save_accumulated_changes();
+    sidebar_y.save_accumulated_changes();
+    sidebar_width.save_accumulated_changes();
+    sidebar_height.save_accumulated_changes();
     
-    bottom_x.reset_changes();
-    bottom_y.reset_changes();
-    bottom_width.reset_changes();
-    bottom_height.reset_changes();
+    bottom_x.save_accumulated_changes();
+    bottom_y.save_accumulated_changes();
+    bottom_width.save_accumulated_changes();
+    bottom_height.save_accumulated_changes();
     
-    ribbon_x.reset_changes();
-    ribbon_y.reset_changes();
-    ribbon_width.reset_changes();
-    ribbon_height.reset_changes();
+    ribbon_x.save_accumulated_changes();
+    ribbon_y.save_accumulated_changes();
+    ribbon_width.save_accumulated_changes();
+    ribbon_height.save_accumulated_changes();
     
-    viewport_x.reset_changes();
-    viewport_y.reset_changes();
-    viewport_width.reset_changes();
-    viewport_height.reset_changes();
+    viewport_x.save_accumulated_changes();
+    viewport_y.save_accumulated_changes();
+    viewport_width.save_accumulated_changes();
+    viewport_height.save_accumulated_changes();
 
+    space_just_true = key_states[SDL_SCANCODE_SPACE].just_became_true();
     // Update window hover state once per frame
     // at the end of the frame so the dT loop has the latest mouse window location.
     update_window_hover();
@@ -350,5 +358,16 @@ void InputSystem::update_window_params(float& win_x, float& win_y, float& win_wi
         viewport_height.update(win_height, latest_time);
     } else {
         // Default case - no specific window handling needed
+    }
+}
+
+void InputSystem::update_mode() {
+    // Example mode update logic based on key states
+    if (mouse_left_state.value) {
+        if (!mouse_left_state.changed_this_frame()) {
+            set_mode(UserMode::MODE_DRAG);
+        }
+    } else {
+        clear_mode(UserMode::MODE_DRAG);
     }
 }

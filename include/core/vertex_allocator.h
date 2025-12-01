@@ -25,6 +25,8 @@ public:
 public:
     // Getters 
 
+    void init();
+
     bool is_allocated(const UUID_t& uuid) const { return (validate_uuid_exists(uuid)); }
     std::optional<unsigned int> get_allocated_size(const UUID_t& uuid) const;
 
@@ -38,12 +40,14 @@ public:
     BatchedMemoryMap reallocate_memory(const BatchEntityRequest& request);
     int memory_free(const std::set<UUID_t>& request);
     BatchedMemoryMap request_memory_offsets(const std::set<UUID_t>& request);
+    BatchedMemoryMap update_memory_data(const BatchEntityRequest& request);
     
     // Overloads for single entity cases
     BatchedMemoryMap allocate_memory(const EntityRequest& request);
     BatchedMemoryMap reallocate_memory(const EntityRequest& request);
     int memory_free(const UUID_t& request);
     BatchedMemoryMap request_memory_offsets(const UUID_t& request);
+    BatchedMemoryMap update_memory_data(const EntityRequest& request);
 
     // Used by Renderer to get latest locations for VBO data + the most up-to-date data as read-only.
     std::vector<AllocatedMem> get_dirty_allocations();
@@ -54,6 +58,22 @@ public:
 
     // Run periodically by Entity Manager to check that all entities accounted for. 
     bool validate_full_uuid_match(const std::set<UUID_t>& uuid_list) const;
+
+    bool mark_uuid_dirty(const UUID_t& uuid) {
+        if(!validate_uuid_exists(uuid)) {
+            return false;
+        }
+        dirty_entities.insert(uuid);
+        return true;
+    }
+
+    bool mark_uuid_clean(const UUID_t& uuid) {
+        if(!validate_uuid_exists(uuid)) {
+            return false;
+        }
+        dirty_entities.erase(uuid);
+        return true;
+    }
 
 
 private:
@@ -96,6 +116,6 @@ private:
     void compactify();
 
 private:
-    static constexpr unsigned int MAX_VERTEX_BUFFER_SIZE = 1024*1024;
+    static constexpr unsigned int MAX_VERTEX_BUFFER_SIZE = 1024*128;
     static constexpr float FRAGMENTATION_THRESHOLD = 0.3f;
 };

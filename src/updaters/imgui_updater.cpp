@@ -48,23 +48,29 @@ bool ImGuiUpdater::init() {
     // Renders a warmup frame to ensure style/font settings are applied
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
-    ImGui::NewFrame();
-    ImGui::Begin("Warmup");
-    ImGui::End();
-    ImGui::Render();
+    // ImGui::NewFrame();
+
+    // ImGui::Render();
 
     return true;
 }
 
-bool ImGuiUpdater::update_state_via_event(EngineEvent &event) {
+bool ImGuiUpdater::update_state_via_event() {
     // ImGuiUpdater no longer handles event ingestion - this is now handled by EventIngester
     // This method can be used for ImGui-specific event responses (theme changes, etc.)
+    auto input = Orchestrator::get()->get_input();
+
+    if (input.just_pressed(SDL_SCANCODE_SPACE)) {
+        Debug::log("Toggling Debug Console Visibility", DebugLevel::INFO);
+        debug_console_state.visible = !debug_console_state.visible;
+    }
     return true;
 }
 
 bool ImGuiUpdater::update_state_via_dT(float dT) {
     // Synchronize ImGui window states with InputSystem's timestamped values 
-    auto input = Orchestrator::get()->get_input();
+    auto& input = Orchestrator::get()->get_input();
+
     input.sidebar_x.update_dT(sidebar_state.pos.x, dT);
     input.sidebar_y.update_dT(sidebar_state.pos.y, dT);
     input.sidebar_width.update_dT(sidebar_state.size.x, dT);
@@ -97,11 +103,11 @@ bool ImGuiUpdater::submit_render_commands() {
     RenderCommand build_main_window = {RenderCommandType::ImGuiWindow, [this](){this->build_main_window();}, "build_main_window"};
     RenderCommand build_debug_console = {RenderCommandType::ImGuiWindow, [this](){this->build_debug_console();}, "build_debug_console"};
 
-    renderer.submit_render_request(build_sidebar);
-    renderer.submit_render_request(build_bottom_panel);
-    renderer.submit_render_request(build_ribbon);
-    renderer.submit_render_request(build_main_window);
-    renderer.submit_render_request(build_debug_console);
+    if(sidebar_state.visible) { renderer.submit_render_request(build_sidebar); }
+    if(bottom_panel_state.visible) { renderer.submit_render_request(build_bottom_panel); }
+    if(ribbon_state.visible) { renderer.submit_render_request(build_ribbon); }
+    if(main_window_state.visible) { renderer.submit_render_request(build_main_window); }
+    if(debug_console_state.visible) { renderer.submit_render_request(build_debug_console); }
 
     return true;
 }
@@ -161,9 +167,11 @@ void ImGuiUpdater::build_main_window() {
 
     ImGui::SetNextWindowPos(ImVec2(0, 0.1 * full_window_size.y), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.7, full_window_size.y * 0.8), ImGuiCond_FirstUseEver);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
     ImGui::Begin(main_window_state.texts["name"].c_str(), &main_window_state.visible);
     main_window_state.pos = ImGui::GetWindowPos();
     main_window_state.size = ImGui::GetWindowSize();
+    ImGui::PopStyleColor();
     ImGui::End();
     
 }

@@ -3,6 +3,7 @@
 #include <core/common.h>
 #include <queue>
 
+
 class RichVertex {
 public:
     RichVertex() = default;
@@ -11,92 +12,149 @@ public:
 public:
 
     // Context data for the vertex 
-    glm::vec3 bounding_box = {0.0f, 0.0f, 0.0f}; // Use this to draw the quad that contains the curve (this is the actual vertex)
+    glm::vec3 bound = {0.0f, 0.0f, 0.0f}; // Use this to draw the quad that contains the curve (this is the actual vertex)
     glm::vec3 start_pt = {0.0f, 0.0f, 0.0f}; // Starting point of the curve. Used by the shader to compute curve
     glm::vec3 end_pt = {0.0f, 0.0f, 0.0f}; // Ending point of the curve. Used by the shader to compute curve
     glm::vec3 control_pt_1 = {0.0f, 0.0f, 0.0f}; // Control point 1 for Bezier curve. Also stands for radius if drawing a circle
-    glm::vec3 control_pt_2 = {0.0f, 0.0f, 0.0f}; // Control point 2 for Bezier curve
+    glm::vec3 control_pt_2 = {0.0f, 0.0f, 0.0f}; // Secondary Control Point. Usually dead space, or extra stuff. 
 
     // Color, thickness, etc
 
     glm::vec2 tex_coords = {0.0f, 0.0f};
-    int thickness = 0;
+    float thickness = 0;
     int filled = 0;
 
 };
+class Entity; // Forward declaration
 
-enum BufferRequestType{ 
-    REGISTER,
-    SHOW,
-    HIDE,
-    UPDATE,
-    DELETE,
+namespace Affine {
+    void TransformCircle(Entity& circle);
+}
+
+namespace Geometry {
+    void CreateCircle(Entity& circle);
+}
+
+namespace Transform {
+    glm::mat4 Translate(const glm::vec3& translation);
+    glm::mat4 Scale(const glm::vec3& scale_factors);
+    glm::mat4 Zoom(float zoom_factor);
+    glm::mat4 Rotate2D(float angle_in_radians);
+}
+
+
+enum class EntityType {
+    CIRCLE,
+    BEZIER_CURVE,
+    POLYLINE,
+    RECTANGLE,
+    IMAGE,
+    TEXT,
 };
-
-
-/** This is a wrapper class that "extracts and holds" entity data.
- * 
- * This way, the Renderer class can manage the GPU-side data without needing
- * to know the details of the Entity structure.
- * 
- * The Entity Structure holds the main copy of this data, mutates,
- * and the Renderer class receives a pointer to it and is able to
- * "give" it the information about memory allocation.
- * 
- * Its identifier is a reference to the UUID in the Entity class.
- * This UUID is linked in at construction time by the Entity class.
- * The Renderer class can then use this UUID to map the EntityData
- * to the Entity that owns it.
-*/
-class EntityData {
-public:
-    EntityData() = delete;
-    EntityData(const uint64_t& uuid) : UUID(uuid) {}
-    ~EntityData() = default;
-private:
-    std::vector<int> vertex_draw_orders;
-    unsigned int vertex_count;
-    std::vector<RichVertex> vertex_data;
-
-    const uint64_t& UUID;
- 
-    friend class Renderer;
-    friend class Entity;
-};
-
-struct BufferRequest; //Forward Decclaration. TODO: Move this into a proper header.
 
 class Entity {
 public:
     Entity() = delete;
-    Entity(const uint64_t& uuid) : gpu_data(uuid) {}
+    Entity(uint64_t uuid) : m_uuid(uuid) {}
+    
+    Entity(const Entity&) = delete;
+    Entity& operator=(const Entity&) = delete;
+    Entity(Entity&&) = default;
+    Entity& operator=(Entity&&) = default;
+
     ~Entity() = default;
 
 public:
+    // Getters
+    uint64_t get_uuid() const { return m_uuid; }
+    const std::vector<RichVertex>& get_vertex_data() const { return m_vertex_data; }
+    const std::vector<RichVertex>& get_base_vertex_data() const { return m_base_vertex_data; }
+    const std::vector<int>& get_indices() const { return m_indices; }
+    size_t get_vertex_count() const { return m_vertex_data.size(); }
+    
+    glm::vec4 get_color() const { return m_color; }
+    EntityType get_type() const { return m_type; }
 
-    uint64_t get_uuid() const { return gpu_data.UUID; }
-    unsigned int get_vertex_size() const { return gpu_data.vertex_count; }
-    std::vector<int> get_local_index_buf() const { return gpu_data.vertex_draw_orders; }
-    std::vector<RichVertex> get_vertex_buf_data() const {return gpu_data.vertex_data; }
+    // Setters
+    void set_vertex_data(const std::vector<RichVertex>& vertices) { m_vertex_data = vertices; }
+    void set_base_vertex_data(const std::vector<RichVertex>& vertices) { m_base_vertex_data = vertices; }
+    void set_indices(const std::vector<int>& indices) { m_indices = indices; }
+    void set_color(const glm::vec4& color) { m_color = color; }
+    void set_type(EntityType type) { m_type = type; }
+
+    // State Setters
+    void set_visible(bool visible) { m_visible = visible; }
+    bool is_visible() const { return m_visible; }
+
+    void set_selectable(bool selectable) { m_selectable = selectable; }
+    bool is_selectable() const { return m_selectable; }
+
+    void set_draggable(bool draggable) { m_draggable = draggable; }
+    bool is_draggable() const { return m_draggable; }
+
+    void set_movable(bool movable) { m_movable = movable; }
+    bool is_movable() const { return m_movable; }
+
+    struct Pose {
+        glm::vec3 position = {0.0f, 0.0f, 0.0f};
+        float size = 1.0f;
+        float rotation = 0.0f; // In radians
+
+        glm::mat4 cached_transform = glm::mat4(1.0f);
+        bool transform_dirty = true;
+
+        void set_position(const glm::vec3& pos) { position = pos; mark_dirty(); }
+
+        void set_size(float new_size) { size = new_size; mark_dirty(); }
+
+        void set_rotation(float new_rotation) { rotation = new_rotation; mark_dirty(); }
+
+        void update_dpos(const glm::vec3& dp) { position += dp; mark_dirty(); }
+
+        void update_dsize(float ds) { size += ds; mark_dirty(); }
+
+        void update_drot(float dr) { rotation += dr; mark_dirty(); }
+
+        void mark_dirty() { transform_dirty = true; }
+        void mark_clean() { transform_dirty = false; }
+
+        inline glm::mat4 update_transform_matrix() {
+            if (transform_dirty) {
+                glm::mat4 translation_mat = Transform::Translate(position);
+                glm::mat4 rotation_mat = Transform::Rotate2D(rotation);
+                glm::mat4 size_mat = Transform::Zoom(size);
+                cached_transform = translation_mat * rotation_mat * size_mat;
+
+                mark_clean();
+            }
+            return cached_transform;
+        }
+    };
+    Pose pose;
 
 private:
-    glm::vec3 origin;
-    float size;
+    // Identity
+    uint64_t m_uuid;
 
-    bool selectable = false;
-    bool draggable = false;
-    bool movable = false;
-    bool visible = false;
+    // Geometry Data
+    std::vector<RichVertex> m_vertex_data;
+    std::vector<RichVertex> m_base_vertex_data;
 
-    EntityData gpu_data;
+    std::vector<int> m_indices;
+
+    // Properties
+    EntityType m_type = EntityType::CIRCLE;
+    glm::vec4 m_color = {1.0f, 1.0f, 1.0f, 1.0f};
+
+    // State
+    bool m_selectable = false;
+    bool m_draggable = false;
+    bool m_movable = false;
+    bool m_visible = true;
 
     friend class WorldData;
     friend class WorldUpdater;
-
+    friend class Renderer;
 };
 
-struct BufferRequest {
-    BufferRequestType type;
-    EntityData* p_entity_data;
-};
 

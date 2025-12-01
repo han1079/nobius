@@ -3,6 +3,7 @@
 
 void DebugConsole::render(bool* p_open) {
     if (!ImGui::Begin("Variable Monitor", p_open, ImGuiWindowFlags_None)) {
+        Debug::log("DebugConsole: ImGui::Begin returned false, skipping rendering.");
         ImGui::End();
         return;
     }

@@ -1,6 +1,35 @@
 #include <core/renderer.h>
 #include <updaters/orchestrator.h>
 
+// Static callback wrapper for ImGui
+static void CustomCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd) {
+    // Retrieve the shader pointer from UserCallbackData
+    CommandBundle* bundle = static_cast<CommandBundle*>(cmd->UserCallbackData);
+    Shader* shader = bundle->shader.get();
+    Renderer* renderer = bundle->renderer;
+    RenderCommand render_cmd = bundle->command;
+    if (shader) {
+        shader->bind();
+
+        shader->set_uniform_mat4("u_ViewProj", render_cmd.transform);
+        shader->set_uniform_4f("u_baseColor", render_cmd.color);
+    }
+
+    if (renderer) {
+        std::string current_updater = render_cmd.updater_name;
+        renderer->m_vertex_buffer.bind();
+        renderer->m_vertex_buffer.sync_data(renderer->get_vertex_allocator());
+        renderer->m_vertex_array.bind();
+        Debug::log("Rendering with index buffer for updater: " + current_updater, DebugLevel::TRACE);
+        renderer->m_index_buffers[current_updater].bind();
+        renderer->m_index_buffers[current_updater].upload_data();
+        renderer->m_index_buffers[current_updater].send_draw_command();
+    }
+}
+
+
+
+
 Renderer::Renderer() = default;
 
 void Renderer::init() {
@@ -47,6 +76,11 @@ void Renderer::init() {
 
     std::string glsl_version = "#version 130";
     set_up_gpu_buffers();
+
+    m_shader_manager.load_shader_from_files("Circle", "shaders/vertex_shader_2D.glsl", "shaders/fragment_shader_circle2D.glsl");
+    std::shared_ptr<Shader> copy_of_shader = m_shader_manager.get_shader("Circle");
+    std::cout << copy_of_shader->m_fragment_source << std::endl;
+
 }
 
 VertexAllocator& Renderer::get_vertex_allocator() {
@@ -59,42 +93,30 @@ void Renderer::submit_render_request(RenderCommand request) {
         Debug::log("Not a proper command.", DebugLevel::ERROR);
         return; 
     }
-    command_queue.push(request);
+
+    CommandBundle cmd_bundle;
+    cmd_bundle.command = std::move(request);
+    cmd_bundle.renderer = this;
+    std::shared_ptr<Shader> shader = m_shader_manager.get_shader(cmd_bundle.command.shader_name);
+    cmd_bundle.shader = shader;
+
+    if(request.type == RenderCommandType::ImGuiWindow) {
+        Debug::log("Command wrapped: " + std::to_string((int)cmd_bundle.command.type), DebugLevel::TRACE);
+    }
+    command_queue.push(cmd_bundle);
 }
 
 void Renderer::set_up_gpu_buffers() {
-    auto& vb = get_vertex_allocator().get_vertex_buffer_data();
     GLCall(glClearColor(gl_clear_color.r * gl_clear_color.a, 
                  gl_clear_color.g * gl_clear_color.a, 
                  gl_clear_color.b * gl_clear_color.a, 
                  gl_clear_color.a));
 
-    GLCall(glGenVertexArrays(1, &m_VAO_ID));
-    GLCall(glGenBuffers(1, &m_VBO_ID));
-    GLCall(glGenBuffers(1, &m_IBO_ID));
-    GLCall(glBindVertexArray(m_VAO_ID));
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, m_VBO_ID));
-    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO_ID));
-    GLCall(glBufferData(GL_ARRAY_BUFFER, vb.size() * sizeof(RichVertex), vb.data(), GL_DYNAMIC_DRAW));
-    
-    GLCall(glVertexAttribPointer(RichVertexAttr::BOUNDINGBOX_LOC, RichVertexAttr::BOUNDINGBOX_SIZE, GL_FLOAT, GL_FALSE, RichVertexAttr::STRIDE, (void*)RichVertexAttr::BOUNDINGBOX_OFFSET));
-    GLCall(glEnableVertexAttribArray(RichVertexAttr::BOUNDINGBOX_LOC));
-    GLCall(glVertexAttribPointer(RichVertexAttr::STARTPT_LOC, RichVertexAttr::STARTPT_SIZE, GL_FLOAT, GL_FALSE, RichVertexAttr::STRIDE, (void*)RichVertexAttr::STARTPT_OFFSET));
-    GLCall(glEnableVertexAttribArray(RichVertexAttr::STARTPT_LOC));
-    GLCall(glVertexAttribPointer(RichVertexAttr::ENDPT_LOC, RichVertexAttr::ENDPT_SIZE, GL_FLOAT, GL_FALSE, RichVertexAttr::STRIDE, (void*)RichVertexAttr::ENDPT_OFFSET));
-    GLCall(glEnableVertexAttribArray(RichVertexAttr::ENDPT_LOC));
-    GLCall(glVertexAttribPointer(RichVertexAttr::CONTROLPT1_LOC, RichVertexAttr::CONTROLPT1_SIZE, GL_FLOAT, GL_FALSE, RichVertexAttr::STRIDE, (void*)RichVertexAttr::CONTROLPT1_OFFSET));
-    GLCall(glEnableVertexAttribArray(RichVertexAttr::CONTROLPT1_LOC));
-    GLCall(glVertexAttribPointer(RichVertexAttr::CONTROLPT2_LOC, RichVertexAttr::CONTROLPT2_SIZE, GL_FLOAT, GL_FALSE, RichVertexAttr::STRIDE, (void*)RichVertexAttr::CONTROLPT2_OFFSET));
-    GLCall(glEnableVertexAttribArray(RichVertexAttr::CONTROLPT2_LOC));
-    GLCall(glVertexAttribPointer(RichVertexAttr::TEXCOORDS_LOC, RichVertexAttr::TEXCOORDS_SIZE, GL_FLOAT, GL_FALSE, RichVertexAttr::STRIDE, (void*)RichVertexAttr::TEXCOORDS_OFFSET));
-    GLCall(glEnableVertexAttribArray(RichVertexAttr::TEXCOORDS_LOC));
-
-    GLCall(glVertexAttribIPointer(RichVertexAttr::THICKNESS_LOC, 1, GL_INT, RichVertexAttr::STRIDE, (void*)RichVertexAttr::THICKNESS_OFFSET));
-    GLCall(glEnableVertexAttribArray(RichVertexAttr::THICKNESS_LOC));
-    
-    GLCall(glVertexAttribIPointer(RichVertexAttr::FILLED_LOC, 1, GL_INT, RichVertexAttr::STRIDE, (void*)RichVertexAttr::FILLED_OFFSET));
-    GLCall(glEnableVertexAttribArray(RichVertexAttr::FILLED_LOC));
+    VertexAllocator& allocator = get_vertex_allocator();
+    m_vertex_buffer.initialize(allocator);
+    m_vertex_buffer.bind();
+    m_vertex_array.initialize();
+    m_vertex_array.bind();
 }
 
 void Renderer::render() {
@@ -109,17 +131,38 @@ void Renderer::render() {
 bool Renderer::start_frame() {
     uint32_t window_flags = SDL_GetWindowFlags(sdl_window);
     bool should_render = !(window_flags & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN));
+
+    auto& in = Orchestrator::get()->get_input();
+
+
     
     if (should_render) {
+
+        Debug::log("Renderer: Starting Frame", DebugLevel::TRACE);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport();
+        gl_main_window_params = {
+            in.viewport_x.value,
+            in.viewport_y.value,
+            in.viewport_width.value,
+            in.viewport_height.value
+        };
+
         ImVec2 display_size = ImGui::GetIO().DisplaySize;
         ImVec2 scale = ImGui::GetIO().DisplayFramebufferScale;
         int w = static_cast<int>(display_size.x) * static_cast<int>(scale.x);
         int h = static_cast<int>(display_size.y);        
+
+        gl_viewport_params = {
+            0.0f,
+            0.0f,
+            static_cast<float>(w),
+            static_cast<float>(h)
+        };
+
         GLCall(glViewport(0,0,w,h)); 
         GLCall(glClearColor(gl_clear_color.r * gl_clear_color.a, 
                      gl_clear_color.g * gl_clear_color.a, 
@@ -132,20 +175,50 @@ bool Renderer::start_frame() {
 
 void Renderer::process_render_submissions() {
     while (!command_queue.empty()) {
-        RenderCommand cmd = command_queue.front();
-        command_queue.pop();
+        CommandBundle& cmd = command_queue.front();
+        Debug::log("Processing command of type: " + std::to_string((int)cmd.command.type), DebugLevel::TRACE);
         process(cmd);
+        command_queue.pop();
     }
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void Renderer::process(RenderCommand& cmd) {
-    if (cmd.type == RenderCommandType::Entity) {
-        //NOT YET IMPLEMENTED
-        return;
-    } else if (cmd.type == RenderCommandType::ImGuiWindow) {
-        cmd.execute_func();
+void Renderer::process(CommandBundle& cmd) {
+
+    if (cmd.command.type == RenderCommandType::Entity) {
+        Debug::log("Renderer: Processing Entity Render Command: " + std::to_string((int)cmd.command.type), DebugLevel::TRACE);
+
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        
+        GLCall(glEnable(GL_DEPTH_TEST));
+        GLCall(glEnable(GL_BLEND));
+
+        GLCall(glViewport(
+            static_cast<GLint>(gl_main_window_params.x),
+            static_cast<GLint>(gl_main_window_params.y),
+            static_cast<GLsizei>(gl_main_window_params.z),
+            static_cast<GLsizei>(gl_main_window_params.w)
+        ));
+        // Resolve the shader pointer. 
+        // Note: We rely on ShaderManager keeping the shared_ptr alive for the duration of the frame.
+        
+        if (cmd.shader) {
+            // Pass the raw pointer to ImGui. 
+            draw_list->AddCallback(CustomCallback, &cmd);
+        } else {
+            Debug::log("Renderer: Failed to find shader for Entity: " + cmd.command.shader_name, DebugLevel::ERROR);
+        }
+
+        draw_list->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+        
+
+    } else if (cmd.command.type == RenderCommandType::ImGuiWindow) {
+        Debug::log("Renderer: Processing ImGuiWindow Render Command: " + cmd.command.debug_name, DebugLevel::TRACE);
+        cmd.command.execute_func();
+    } else {
+        Debug::log("Renderer: Unknown Render Command Type", DebugLevel::ERROR);
+        Debug::log("Renderer: Command Debug Name: " + std::to_string((int)cmd.command.type), DebugLevel::ERROR);
     }
 }
 

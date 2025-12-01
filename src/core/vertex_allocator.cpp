@@ -1,9 +1,11 @@
 #include <core/vertex_allocator.h>
 
 VertexAllocator::VertexAllocator() :
-    gpu_vertex_buffer(MAX_VERTEX_BUFFER_SIZE),
+    gpu_vertex_buffer(),
     entity_memory_list(),
-    dirty_entities() {}
+    dirty_entities(){
+        init();
+    }
 
 VertexAllocator::~VertexAllocator() {
     // Does nothing for now. Everything is RAII. No pointers are returned.
@@ -21,6 +23,11 @@ bool VertexAllocator::validate_allocation_size(int vertex_count) {
     if (memory_edge + vertex_count <= gpu_vertex_buffer.size() && vertex_count > 0) {
         return true;
     }
+
+    Debug::log("Memory Edge At: " + std::to_string(memory_edge), DebugLevel::ERROR);
+    Debug::log("Requested Vertex Count: " + std::to_string(vertex_count), DebugLevel::ERROR);
+    Debug::log("GPU Vertex Buffer Size: " + std::to_string(gpu_vertex_buffer.size()), DebugLevel::ERROR);
+    Debug::log("Invalid allocation size requested.", DebugLevel::ERROR);
     return false;
 }
 
@@ -28,6 +35,8 @@ bool VertexAllocator::validate_uuid_available(const UUID_t& uuid) const {
     if(entity_memory_list.count(uuid) == 0) {
         return true;
     }
+
+    Debug::log("UUID: " + std::to_string(uuid) + "not available.", DebugLevel::ERROR);
     return false;
 }
 
@@ -35,12 +44,13 @@ bool VertexAllocator::validate_uuid_exists(const UUID_t& uuid) const {
     if(entity_memory_list.count(uuid) == 1) {
         return true;
     }
+    Debug::log("UUID: " + std::to_string(uuid) + "DNE.", DebugLevel::ERROR);
     return false;
 }
 
 
 std::optional<AllocatedMem> VertexAllocator::allocate_memory_for_uuid(const UUID_t& uuid, const int& entity_size) {
-    if(!validate_uuid_available(uuid)) { return std::nullopt; } 
+    if(!validate_uuid_available(uuid)) {  return std::nullopt; } 
     if(!validate_allocation_size(entity_size)) { return std::nullopt; }
 
     AllocatedMem new_mem = {(unsigned)memory_edge, (unsigned)entity_size, uuid};
@@ -217,8 +227,8 @@ bool VertexAllocator::validate_full_uuid_match(const std::set<UUID_t>& uuid_list
 // Overloads for single entity cases
 BatchedMemoryMap VertexAllocator::allocate_memory(const EntityRequest& request) {
     BatchedMemoryMap to_rtn;
-    int esize = request.second->get_vertex_size();
-    std::vector<RichVertex> verts = request.second->get_vertex_buf_data();
+    int esize = request.second->get_vertex_count();
+    std::vector<RichVertex> verts = request.second->get_vertex_data();
     std::optional<AllocatedMem> alloc_mem = allocate_memory_for_uuid(request.first, esize);
     
     if (alloc_mem.has_value()){
@@ -235,8 +245,8 @@ BatchedMemoryMap VertexAllocator::allocate_memory(const EntityRequest& request) 
 
 BatchedMemoryMap VertexAllocator::reallocate_memory(const EntityRequest& request) {
     BatchedMemoryMap to_rtn;
-    int esize = request.second->get_vertex_size();
-    std::vector<RichVertex> verts = request.second->get_vertex_buf_data();
+    int esize = request.second->get_vertex_count();
+    std::vector<RichVertex> verts = request.second->get_vertex_data();
     std::optional<AllocatedMem> realloc_mem = reallocate_memory_for_uuid(request.first, esize);
 
     if (realloc_mem.has_value()){
@@ -249,6 +259,20 @@ BatchedMemoryMap VertexAllocator::reallocate_memory(const EntityRequest& request
         ASSERT(false); // Safeguards from smaller functions should prevent this. If it gets here, panic.
     }
     return to_rtn; // Due to assert safeguard - we should always be safe to default return a nonempty batch.
+}
+
+BatchedMemoryMap VertexAllocator::update_memory_data(const EntityRequest& request) {
+    BatchedMemoryMap to_rtn;
+    if(!validate_uuid_exists(request.first)) {
+        ASSERT(false); // Trying to update non-allocated memory!
+        return to_rtn;
+    }
+    std::vector<RichVertex> verts = request.second->get_vertex_data();
+    AllocatedMem alloc_mem = entity_memory_list.at(request.first);
+    assign_memory(alloc_mem.offset, verts);
+    to_rtn.insert({request.first, alloc_mem});
+    dirty_entities.insert(request.first);
+    return to_rtn;
 }
 
 int VertexAllocator::memory_free(const UUID_t& request) {
@@ -270,8 +294,8 @@ BatchedMemoryMap VertexAllocator::allocate_memory(const BatchEntityRequest& requ
 
     BatchedMemoryMap to_rtn;
     for (auto& req : request) {
-        int esize = req.second->get_vertex_size();
-        std::vector<RichVertex> verts = req.second->get_vertex_buf_data();
+        int esize = req.second->get_vertex_count();
+        std::vector<RichVertex> verts = req.second->get_vertex_data();
         std::optional<AllocatedMem> alloc_mem = allocate_memory_for_uuid(req.first, esize);
         if (alloc_mem.has_value()){
             AllocatedMem tmp = {alloc_mem.value()};  
@@ -289,8 +313,8 @@ BatchedMemoryMap VertexAllocator::reallocate_memory(const BatchEntityRequest& re
 
     BatchedMemoryMap to_rtn;
     for (auto& req : request) {
-        int esize = req.second->get_vertex_size();
-        std::vector<RichVertex> verts = req.second->get_vertex_buf_data();
+        int esize = req.second->get_vertex_count();
+        std::vector<RichVertex> verts = req.second->get_vertex_data();
         std::optional<AllocatedMem> realloc_mem = reallocate_memory_for_uuid(req.first, esize);
         if (realloc_mem.has_value()){
             AllocatedMem tmp = {realloc_mem.value()};  
@@ -303,6 +327,22 @@ BatchedMemoryMap VertexAllocator::reallocate_memory(const BatchEntityRequest& re
         }
     }
     return to_rtn; // Due to assert safeguard - we should always be safe to default return a nonempty batch.
+}
+
+BatchedMemoryMap VertexAllocator::update_memory_data(const BatchEntityRequest& request) {
+    BatchedMemoryMap to_rtn;
+    for (auto& req : request) {
+        if(!validate_uuid_exists(req.first)) {
+            ASSERT(false); // Trying to update non-allocated memory!
+            continue;
+        }
+        std::vector<RichVertex> verts = req.second->get_vertex_data();
+        AllocatedMem alloc_mem = entity_memory_list.at(req.first);
+        assign_memory(alloc_mem.offset, verts);
+        to_rtn.insert({req.first, alloc_mem});
+        dirty_entities.insert(req.first);
+    }
+    return to_rtn;
 }
 
 int VertexAllocator::memory_free(const std::set<UUID_t>& request) {
@@ -391,4 +431,8 @@ std::optional<BatchedMemoryMap> VertexAllocator::request_compactification() {
     gpu_vertex_buffer.swap(tmp_vertex_buffer);
 
     return entity_memory_list;
+}
+
+void VertexAllocator::init() {
+    gpu_vertex_buffer.resize(MAX_VERTEX_BUFFER_SIZE);
 }

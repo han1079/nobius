@@ -8,6 +8,8 @@
 
 typedef std::variant<std::nullptr_t, 
     std::reference_wrapper<int>, 
+    std::reference_wrapper<uint32_t>,
+    std::reference_wrapper<uint64_t>,
     std::reference_wrapper<float>, 
     std::reference_wrapper<double>, 
     std::reference_wrapper<bool>, 
@@ -49,6 +51,10 @@ public:
             } else if constexpr (std::is_same_v<T, std::reference_wrapper<float>>) {
                 return std::to_string(var.get());
             } else if constexpr (std::is_same_v<T, std::reference_wrapper<double>>) {
+                return std::to_string(var.get());
+            } else if constexpr (std::is_same_v<T, std::reference_wrapper<uint32_t>>) {
+                return std::to_string(var.get());
+            } else if constexpr (std::is_same_v<T, std::reference_wrapper<uint64_t>>) {
                 return std::to_string(var.get());
             } else if constexpr (std::is_same_v<T, std::reference_wrapper<bool>>) {
                 return var.get() ? "true" : "false";

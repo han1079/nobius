@@ -4,7 +4,9 @@
 
 /*Load Spec Constructor. Member objects find and build with load spec filename string*/
 Orchestrator::Orchestrator(const LoadSpec& load_spec):
+        m_vertex_allocator(),
         m_input_system(),
+        m_renderer(),
         m_world_updater(),
         m_imgui_updater() {
         m_orchestrator_ptr = this;
@@ -14,6 +16,7 @@ Orchestrator::Orchestrator(const LoadSpec& load_spec):
 Orchestrator::~Orchestrator() = default;
 
 void Orchestrator::init(){
+    m_vertex_allocator.init();
     // Initialize renderer first to create Window/Context
     m_renderer.init(); 
 
@@ -67,17 +70,22 @@ void Orchestrator::run() {
                 // Screen is not visible. Skip any event processing
                 continue;
             }
-            m_world_updater.update_state_via_event(event);
-            m_imgui_updater.update_state_via_event(event);
+
         }
 
-        m_input_system.reset_changes();
+        m_input_system.save_accumulated_changes();
+        m_input_system.update_mode();
+
+        m_world_updater.update_state_via_event();
+        m_imgui_updater.update_state_via_event();
+
         loop_event_ct = 0;
         
         m_world_updater.update_state_via_dT(dT);
         m_imgui_updater.update_state_via_dT(dT);
 
         m_imgui_updater.submit_render_commands();
+        m_world_updater.submit_render_commands();
 
         m_renderer.render();
 

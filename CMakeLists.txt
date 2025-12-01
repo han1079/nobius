@@ -54,6 +54,7 @@ set(IMGUI_SOURCES ${CMAKE_SOURCE_DIR}/ext/imgui/imgui.cpp
 set(CORE_BUILD ${CMAKE_SOURCE_DIR}/src/core/base_state.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/base_updater.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/vertex_allocator.cpp
+                ${CMAKE_SOURCE_DIR}/src/core/entity_manager.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/common.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/entity.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/shader.cpp

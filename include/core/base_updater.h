@@ -17,7 +17,7 @@ public:
 protected:
     virtual bool init();
     virtual bool shutdown();
-    virtual bool update_state_via_event(EngineEvent &event);
+    virtual bool update_state_via_event();
     virtual bool update_state_via_dT(float dT);
     virtual bool submit_render_commands();
 };

@@ -1,4 +1,5 @@
 #include <core/shader.h>
+#include <utils/file_utils.h>
 
 Shader::Shader(const std::string& vertex_src, const std::string& fragment_src, const std::string& name) :
     m_vertex_source(vertex_src), m_fragment_source(fragment_src), m_name(name)
@@ -38,7 +39,7 @@ void Shader::initialize_shader() {
     if (!success) {
         GLCall(glGetShaderInfoLog(_vs, 512, NULL, errlog));
         Debug::log("Vertex Shader Compilation Error", DebugLevel::ERROR);
-        Debug::log(errlog, DebugLevel::ERROR);
+        Debug::log(errlog, DebugLevel::FATAL);
     }
 
     GLCall(glShaderSource(_fs, 1, &fragment_string, NULL));
@@ -50,7 +51,7 @@ void Shader::initialize_shader() {
     if (!success) {
         Debug::log("Fragment Shader Compilation Error", DebugLevel::ERROR);
         GLCall(glGetShaderInfoLog(_fs, 512, NULL, errlog));
-        Debug::log(errlog, DebugLevel::ERROR);
+        Debug::log(errlog, DebugLevel::FATAL);
     }
 
 
@@ -67,13 +68,15 @@ void Shader::initialize_shader() {
     if (!success) {
         Debug::log("Shader Linking Error", DebugLevel::ERROR);
         GLCall(glGetProgramInfoLog(_fs, 512, NULL, errlog));
-        Debug::log(errlog, DebugLevel::ERROR);
+        Debug::log(errlog, DebugLevel::FATAL);
     }
 
     GLCall(glDeleteShader(_vs));
     GLCall(glDeleteShader(_fs));
 
     m_program_is_valid = (success && validate_program());
+
+    Debug::log("Shader Program '" + m_name + "' Initialized. Program ID: " + std::to_string(m_program_id), DebugLevel::INFO);
 }
 
 void Shader::cleanup() {
@@ -90,12 +93,18 @@ int Shader::validate_program() const {
 
 bool Shader::bind() const {
     if (!m_program_is_valid) return false;
+    Debug::log("Binding Shader Program ID: " + std::to_string(m_program_id), DebugLevel::TRACE);
     GLCall(glUseProgram(m_program_id));
     return true; 
 }
 
 void Shader::unbind() const {
-    GLCall(glUseProgram(0));
+    int current_id = 0;
+    GLCall(glGetIntegerv(GL_CURRENT_PROGRAM, &current_id));
+
+    if (current_id == m_program_id) {
+        GLCall(glUseProgram(0));
+    }
 }
 
 
@@ -113,15 +122,20 @@ int Shader::lookup_loc_name(const std::string& name) {
     int loc = -1;
     if (m_name_to_loc_cache.count(name) != 0) {
         loc = m_name_to_loc_cache[name];
+        Debug::log("Shader Uniform " + name +  " Found in Cache", DebugLevel::TRACE);
+        Debug::log("Location: " + std::to_string(loc), DebugLevel::TRACE);
     } else {
         loc = glGetUniformLocation(m_program_id, name.c_str());
 
         if (loc >= 0) {
             m_name_to_loc_cache[name] = loc;
         } else {
-            Debug::log("Shader Loc Not Found", DebugLevel::ERROR);
+            Debug::log("Shader Uniform " + name +  " Not Found", DebugLevel::ERROR);
         }
     }
+
+    Debug::log("Test: " + std::to_string(glGetUniformLocation(m_program_id, "u_ViewProj[2]")), DebugLevel::TRACE);
+    Debug::log("Test: " + std::to_string(glGetUniformLocation(m_program_id, "u_ViewProj")), DebugLevel::TRACE);
 
     return loc;
 }
@@ -158,7 +172,7 @@ bool Shader::set_uniform_1f(const std::string& name, float value) {
     return false;
 }
 
-bool Shader::set_uniform_4f(const std::string& name, glm::vec4 value){
+bool Shader::set_uniform_4f(const std::string& name, const glm::vec4& value){
     if (!m_program_is_valid) return false;
     int loc = lookup_loc_name(name); 
     if (loc != -1) { 
@@ -186,5 +200,41 @@ bool Shader::set_uniform_mat4(const std::string& name, const glm::mat4& matrix) 
         return true;
     }
     return false;
+}
+
+void ShaderManager::register_shader(const std::string& name, const std::shared_ptr<Shader>& shader) {
+    Debug::log("ShaderManager: Registering Shader: " + name, DebugLevel::INFO);
+    if (m_shaders.count(name) != 0) {
+        Debug::log("ShaderManager: Warning - Overwriting existing shader: " + name, DebugLevel::WARN);
+    }   
+    m_shaders[name] = shader;
+}
+
+void ShaderManager::deregister_shader(const std::string& name) {
+    if (m_shaders.count(name) == 0) {
+        Debug::log("ShaderManager: Tried to deregister non-existent shader: " + name, DebugLevel::ERROR);
+        return;
+    }
+    m_shaders.at(name)->unbind();
+    m_shaders.erase(name);
+}
+
+void ShaderManager::load_shader_from_files(const std::string& name, const std::string& vertex_path, const std::string& fragment_path) {
+    std::string vertex_code = FileUtils::read_file_to_string(vertex_path);
+    std::string fragment_code = FileUtils::read_file_to_string(fragment_path);
+
+    Debug::log("Loading Shader: " + vertex_code, DebugLevel::INFO);
+    Debug::log("Loading Shader: " + fragment_code, DebugLevel::INFO);
+
+    std::shared_ptr<Shader> shader = std::make_shared<Shader>(vertex_code, fragment_code, name);
+    register_shader(name, shader);
+}
+
+std::shared_ptr<Shader> ShaderManager::get_shader(const std::string& name) {
+    if (m_shaders.find(name) != m_shaders.end()) {
+        return m_shaders[name];
+    }
+    Debug::log("ShaderManager: Shader not found: " + name, DebugLevel::ERROR);
+    return nullptr;
 }
 

@@ -26,6 +26,7 @@ private:
     HoveredUIElement hovered_element = HoveredUIElement::NONE;
     std::string hovered_element_name = "NONE";
     float latest_time = 0.0f;
+    bool space_just_true = false;
 
 
     // Mode state (consolidated from ModeState)
@@ -39,14 +40,16 @@ public:
     void update_window_hover();
     EngineEvent ingest_event(SDL_Event& event);
     void update_window_params(float& win_x, float& win_y, float& win_width, float& win_height, std::string window_name);
+    void update_mode();
     
     // Frame management
-    void reset_changes();
+    void save_accumulated_changes();
     void begin_frame(float timestamp);
 
     // Input state queries
     glm::vec2 get_mouse_position() const { return {mouse_x.value, mouse_y.value}; }
     glm::vec2 get_mouse_relative_position() const { return {mouse_x_relative.value, mouse_y_relative.value}; }
+    glm::vec2 get_mouse_delta_position() const { return {mouse_x.delta_value, mouse_y.delta_value}; }
     bool is_key_pressed(SDL_Scancode key) const;
     bool just_pressed(SDL_Scancode key) const;
     bool is_ctrl_pressed() const { return ctrl_state.value; }

@@ -8,6 +8,8 @@
 #include <string>
 #endif
 
+#include <source_location>
+
 // Debug hook macros - controlled by DEBUG flag
 #ifdef DEBUG
     // Function debug setup - creates static variables and hooks
@@ -122,22 +124,23 @@ class Debug {
     Debug() = delete;
     ~Debug() = delete;
 
-    static void log(const std::string& msg, DebugLevel level = DebugLevel::INFO) {
+    static void log(const std::string& msg, DebugLevel level = DebugLevel::INFO, const std::source_location& loc = std::source_location::current()) {
+        std::string location_str = std::string(loc.file_name()) + ":" + std::to_string(loc.line());
         switch (level) {
             case TRACE:
-                std::cout << "[TRACE]: " << msg << std::endl;
+                std::cout << "[TRACE] [" << location_str << "]: " << msg << std::endl;
                 break;
             case INFO:
-                std::cout << "[INFO]: " << msg << std::endl;
+                std::cout << "[INFO] [" << location_str << "]: " << msg << std::endl;
                 break;
             case WARN:
-                std::cout << "[WARN]: " << msg << std::endl;
+                std::cout << "[WARN] [" << location_str << "]: " << msg << std::endl;
                 break;
             case ERROR:
-                std::cout << "[ERROR]: " << msg << std::endl;
+                std::cout << "[ERROR] [" << location_str << "]: " << msg << std::endl;
                 break;
             case FATAL:
-                std::cout << "[FATAL]: " << msg << std::endl;
+                std::cout << "[FATAL] [" << location_str << "]: " << msg << std::endl;
                 abort();
                 break;
         }
