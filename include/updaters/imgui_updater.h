@@ -34,7 +34,7 @@ public:
         main_window_state.visible = true;
         main_window_state.texts["name"] = "Main Window";
 
-        debug_console_state.visible = false;
+        debug_console_state.visible = true;
         debug_console_state.texts["name"] = "Debug Console";
         DEBUG_HOOK_FUNCTION_NO_TIMER();
         DEBUG_HOOK_VAR_AS(debug_console_state.visible, "DEBUG_CONSOLE_VISIBLE");

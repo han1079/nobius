@@ -2,23 +2,18 @@
 #include <imgui_internal.h>
 
 InputSystem::InputSystem() 
-    : ctrl_state(), shift_state(), alt_state(),
-      mouse_left_state(), mouse_right_state(), mouse_middle_state(),
-      mouse_wheel_dy(),
-      mouse_x(), mouse_y(),
-      mouse_x_relative(), mouse_y_relative()
 {
     for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
-        key_states[i] = TimeStampedBool();
+        keyboard.keys[i] = TimeStampedValue<bool>();
     }
     DEBUG_HOOK_FUNCTION_NO_TIMER();
-    DEBUG_HOOK_VAR_AS(hovered_element_name, "HOVERED_UI_ELEMENT_NAME");
-    DEBUG_HOOK_VAR_AS(mouse_x.value, "MOUSE_X");
-    DEBUG_HOOK_VAR_AS(mouse_y.value, "MOUSE_Y");
-    DEBUG_HOOK_VAR_AS(mouse_x_relative.value, "MOUSE_X_RELATIVE");
-    DEBUG_HOOK_VAR_AS(mouse_y_relative.value, "MOUSE_Y_RELATIVE");
+    DEBUG_HOOK_VAR_AS(mouse.hovered_element_name, "HOVERED_UI_ELEMENT_NAME");
+    DEBUG_HOOK_VAR_AS(mouse.screen_pos.value.x, "MOUSE_X");
+    DEBUG_HOOK_VAR_AS(mouse.screen_pos.value.y, "MOUSE_Y");
+    DEBUG_HOOK_VAR_AS(mouse.relative_pos.value.x, "MOUSE_X_RELATIVE");
+    DEBUG_HOOK_VAR_AS(mouse.relative_pos.value.y, "MOUSE_Y_RELATIVE");
     DEBUG_HOOK_VAR_AS(user_mode, "USER_MODE_FLAGS");
-    DEBUG_HOOK_VAR_AS(key_states[SDL_SCANCODE_SPACE].value, "KEY_SPACE_STATE");
+    DEBUG_HOOK_VAR_AS(keyboard.keys[SDL_SCANCODE_SPACE].value, "KEY_SPACE_STATE");
     DEBUG_HOOK_VAR_AS(space_just_true, "KEY_SPACE_JUST_TRUE");
 }
 
@@ -28,23 +23,23 @@ void InputSystem::update_time(float timestamp) {
 
 bool InputSystem::is_key_pressed(SDL_Scancode key) const {
     if (key >= 0 && key < SDL_NUM_SCANCODES) {
-        return key_states[key].value;
+        return keyboard.keys[key].value;
     }
     return false;
 }
 
 bool InputSystem::just_pressed(SDL_Scancode key) const {
     if (key >= 0 && key < SDL_NUM_SCANCODES) {
-        return key_states[key].just_became_true();
+        return keyboard.keys[key].just_became_true();
     }
     return false;
 }
 
 bool InputSystem::is_mouse_pressed(int button) const {
     switch(button) {
-        case SDL_BUTTON_LEFT: return mouse_left_state.value;
-        case SDL_BUTTON_RIGHT: return mouse_right_state.value;
-        case SDL_BUTTON_MIDDLE: return mouse_middle_state.value;
+        case SDL_BUTTON_LEFT: return mouse.left_button.value;
+        case SDL_BUTTON_RIGHT: return mouse.right_button.value;
+        case SDL_BUTTON_MIDDLE: return mouse.middle_button.value;
         default: return false;
     }
 }
@@ -64,23 +59,35 @@ void InputSystem::update_window_hover() {
         if (strcmp(window_name.c_str(), "Sidebar") == 0) {
             hovered_element = HoveredUIElement::SIDEBAR;
             hovered_element_name = HoveredUIElementNames[HoveredUIElement::SIDEBAR];
+            mouse.hovered_element = HoveredUIElement::SIDEBAR;
+            mouse.hovered_element_name = HoveredUIElementNames[HoveredUIElement::SIDEBAR];
         } else if (strcmp(window_name.c_str(), "Bottom Panel") == 0) {
             hovered_element = HoveredUIElement::BOTTOM_PANEL;
             hovered_element_name = HoveredUIElementNames[HoveredUIElement::BOTTOM_PANEL];
+            mouse.hovered_element = HoveredUIElement::BOTTOM_PANEL;
+            mouse.hovered_element_name = HoveredUIElementNames[HoveredUIElement::BOTTOM_PANEL];
         } else if (strcmp(window_name.c_str(), "Ribbon") == 0) {
             hovered_element = HoveredUIElement::RIBBON;
             hovered_element_name = HoveredUIElementNames[HoveredUIElement::RIBBON];
+            mouse.hovered_element = HoveredUIElement::RIBBON;
+            mouse.hovered_element_name = HoveredUIElementNames[HoveredUIElement::RIBBON];
         } else if (strcmp(window_name.c_str(), "Main Window") == 0) {
             hovered_element = HoveredUIElement::VIEWPORT;
             hovered_element_name = HoveredUIElementNames[HoveredUIElement::VIEWPORT];
+            mouse.hovered_element = HoveredUIElement::VIEWPORT;
+            mouse.hovered_element_name = HoveredUIElementNames[HoveredUIElement::VIEWPORT];
         } else {
             hovered_element = HoveredUIElement::NONE;
             hovered_element_name = HoveredUIElementNames[HoveredUIElement::NONE];
+            mouse.hovered_element = HoveredUIElement::NONE;
+            mouse.hovered_element_name = HoveredUIElementNames[HoveredUIElement::NONE];
         }
         
     } else {
         hovered_element = HoveredUIElement::NONE;
         hovered_element_name = HoveredUIElementNames[HoveredUIElement::NONE];
+        mouse.hovered_element = HoveredUIElement::NONE;
+        mouse.hovered_element_name = HoveredUIElementNames[HoveredUIElement::NONE];
     }
 }
 
@@ -189,47 +196,47 @@ EngineEvent InputSystem::ingest_event(SDL_Event& e) {
     switch(event.type) {
         case EngineEventType::KeyDown:
             if (event.key_info.scancode < SDL_NUM_SCANCODES && event.key_info.scancode >= 0) {
-                key_states[event.key_info.scancode].update(true, latest_time);
+                keyboard.keys[event.key_info.scancode].update(true, latest_time);
                 if (event.key_info.scancode == SDL_SCANCODE_LCTRL || event.key_info.scancode == SDL_SCANCODE_RCTRL) {
-                    ctrl_state.update(true, latest_time);
+                    keyboard.ctrl.update(true, latest_time);
                 } else if (event.key_info.scancode == SDL_SCANCODE_LSHIFT || event.key_info.scancode == SDL_SCANCODE_RSHIFT) {
-                    shift_state.update(true, latest_time);
+                    keyboard.shift.update(true, latest_time);
                 } else if (event.key_info.scancode == SDL_SCANCODE_LALT || event.key_info.scancode == SDL_SCANCODE_RALT) {
-                    alt_state.update(true, latest_time);
+                    keyboard.alt.update(true, latest_time);
                 }
             }
             break;
 
         case EngineEventType::KeyUp:
             if (event.key_info.scancode < SDL_NUM_SCANCODES && event.key_info.scancode >= 0) {
-                key_states[event.key_info.scancode].update(false, latest_time);
+                keyboard.keys[event.key_info.scancode].update(false, latest_time);
                 if (event.key_info.scancode == SDL_SCANCODE_LCTRL || event.key_info.scancode == SDL_SCANCODE_RCTRL) {
-                    ctrl_state.update(false, latest_time);
+                    keyboard.ctrl.update(false, latest_time);
                 } else if (event.key_info.scancode == SDL_SCANCODE_LSHIFT || event.key_info.scancode == SDL_SCANCODE_RSHIFT) {
-                    shift_state.update(false, latest_time);
+                    keyboard.shift.update(false, latest_time);
                 } else if (event.key_info.scancode == SDL_SCANCODE_LALT || event.key_info.scancode == SDL_SCANCODE_RALT) {
-                    alt_state.update(false, latest_time);
+                    keyboard.alt.update(false, latest_time);
                 }
             }
             break;
 
         case EngineEventType::MouseButtonDown:
             if (event.mouse_button == SDL_BUTTON_LEFT) {
-                mouse_left_state.update(true, latest_time);
+                mouse.left_button.update(true, latest_time);
             } else if (event.mouse_button == SDL_BUTTON_RIGHT) {
-                mouse_right_state.update(true, latest_time);
+                mouse.right_button.update(true, latest_time);
             } else if (event.mouse_button == SDL_BUTTON_MIDDLE) {
-                mouse_middle_state.update(true, latest_time);
+                mouse.middle_button.update(true, latest_time);
             }
             break;
 
         case EngineEventType::MouseButtonUp:
             if (event.mouse_button == SDL_BUTTON_LEFT) {
-                mouse_left_state.update(false, latest_time);
+                mouse.left_button.update(false, latest_time);
             } else if (event.mouse_button == SDL_BUTTON_RIGHT) {
-                mouse_right_state.update(false, latest_time);
+                mouse.right_button.update(false, latest_time);
             } else if (event.mouse_button == SDL_BUTTON_MIDDLE) {
-                mouse_middle_state.update(false, latest_time);
+                mouse.middle_button.update(false, latest_time);
             }
             break;
 
@@ -238,7 +245,7 @@ EngineEvent InputSystem::ingest_event(SDL_Event& e) {
             break;
 
         case EngineEventType::MouseWheel:
-            mouse_wheel_dy.update(static_cast<float>(event.wheel_dy), latest_time);
+            mouse.wheel_delta.update(static_cast<float>(event.wheel_dy), latest_time);
             break;
 
         default:
@@ -252,79 +259,48 @@ EngineEvent InputSystem::ingest_event(SDL_Event& e) {
 void InputSystem::update_mouse(float new_mouse_x, float new_mouse_y, float timestamp) {
     float win_x = 0.0f;
     float win_y = 0.0f;
+    float cartesian_y = 0.0f;
+    float cartesian_x = 0.0f;
     
-    switch(hovered_element) {
-        case HoveredUIElement::VIEWPORT:
-            win_x = viewport_x.value;
-            win_y = viewport_y.value; 
-            break;
-        case HoveredUIElement::SIDEBAR:
-            win_x = sidebar_x.value;
-            win_y = sidebar_y.value;
-            break;
-        case HoveredUIElement::BOTTOM_PANEL:
-            win_x = bottom_x.value;
-            win_y = bottom_y.value;
-            break;
-        case HoveredUIElement::RIBBON:
-            win_x = ribbon_x.value;
-            win_y = ribbon_y.value;
-            break;
-        default:
-            win_x = 0.0f;
-            win_y = 0.0f;
-            break;
-    }
-    
-    mouse_x_relative.update(new_mouse_x - win_x, timestamp);
-    mouse_y_relative.update(new_mouse_y - win_y, timestamp);
-    mouse_x.update(new_mouse_x, timestamp);
-    mouse_y.update(new_mouse_y, timestamp);
+    win_x = windows.viewport.value.x;
+    win_y = windows.viewport.value.y; 
+    cartesian_x = new_mouse_x - win_x;
+    cartesian_y = windows.viewport.value.w - (new_mouse_y - win_y);
+
+    // Update structured state
+    mouse.screen_pos.update(glm::vec2(new_mouse_x, new_mouse_y), timestamp);
+    mouse.relative_pos.update(glm::vec2(new_mouse_x - win_x, new_mouse_y - win_y), timestamp);
+    mouse.cartesian_pos.update(glm::vec2(cartesian_x, cartesian_y), timestamp);
+    // Delta is calculated automatically by TimeStampedValue
 }
 
 void InputSystem::save_accumulated_changes() {
     // Reset all change counters after SDL_PollEvents is complete
-    ctrl_state.save_accumulated_changes();
-    shift_state.save_accumulated_changes();
-    alt_state.save_accumulated_changes();
+    keyboard.ctrl.save_accumulated_changes();
+    keyboard.shift.save_accumulated_changes();
+    keyboard.alt.save_accumulated_changes();
     
-    mouse_left_state.save_accumulated_changes();
-    mouse_right_state.save_accumulated_changes();
-    mouse_middle_state.save_accumulated_changes();
+    mouse.left_button.save_accumulated_changes();
+    mouse.right_button.save_accumulated_changes();
+    mouse.middle_button.save_accumulated_changes();
     
-    mouse_wheel_dy.save_accumulated_changes();
-    mouse_x.save_accumulated_changes();
-    mouse_y.save_accumulated_changes();
-    mouse_x_relative.save_accumulated_changes();
-    mouse_y_relative.save_accumulated_changes();
+    mouse.wheel_delta.save_accumulated_changes();
+    mouse.screen_pos.save_accumulated_changes();
+    mouse.relative_pos.save_accumulated_changes();
+    mouse.cartesian_pos.save_accumulated_changes();
     
     // Reset all individual key states
     for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
-        key_states[i].save_accumulated_changes();
+        keyboard.keys[i].save_accumulated_changes();
     }
     
     // Reset UI element position tracking
-    sidebar_x.save_accumulated_changes();
-    sidebar_y.save_accumulated_changes();
-    sidebar_width.save_accumulated_changes();
-    sidebar_height.save_accumulated_changes();
-    
-    bottom_x.save_accumulated_changes();
-    bottom_y.save_accumulated_changes();
-    bottom_width.save_accumulated_changes();
-    bottom_height.save_accumulated_changes();
-    
-    ribbon_x.save_accumulated_changes();
-    ribbon_y.save_accumulated_changes();
-    ribbon_width.save_accumulated_changes();
-    ribbon_height.save_accumulated_changes();
-    
-    viewport_x.save_accumulated_changes();
-    viewport_y.save_accumulated_changes();
-    viewport_width.save_accumulated_changes();
-    viewport_height.save_accumulated_changes();
+    windows.sidebar.save_accumulated_changes();
+    windows.bottom_panel.save_accumulated_changes();
+    windows.ribbon.save_accumulated_changes();
+    windows.viewport.save_accumulated_changes();
 
-    space_just_true = key_states[SDL_SCANCODE_SPACE].just_became_true();
+    space_just_true = keyboard.keys[SDL_SCANCODE_SPACE].just_became_true();
     // Update window hover state once per frame
     // at the end of the frame so the dT loop has the latest mouse window location.
     update_window_hover();
@@ -337,25 +313,13 @@ void InputSystem::begin_frame(float timestamp) {
 
 void InputSystem::update_window_params(float& win_x, float& win_y, float& win_width, float& win_height, std::string window_name) {
     if (window_name == "Sidebar") {
-        sidebar_x.update(win_x, latest_time);
-        sidebar_y.update(win_y, latest_time);
-        sidebar_width.update(win_width, latest_time);
-        sidebar_height.update(win_height, latest_time);
+        windows.sidebar.update(glm::vec4(win_x, win_y, win_width, win_height), latest_time);
     } else if (window_name == "Bottom Panel") {
-        bottom_x.update(win_x, latest_time);
-        bottom_y.update(win_y, latest_time);
-        bottom_width.update(win_width, latest_time);
-        bottom_height.update(win_height, latest_time);
+        windows.bottom_panel.update(glm::vec4(win_x, win_y, win_width, win_height), latest_time);
     } else if (window_name == "Ribbon") {
-        ribbon_x.update(win_x, latest_time);
-        ribbon_y.update(win_y, latest_time);
-        ribbon_width.update(win_width, latest_time);
-        ribbon_height.update(win_height, latest_time);
+        windows.ribbon.update(glm::vec4(win_x, win_y, win_width, win_height), latest_time);
     } else if (window_name == "Main Window") {
-        viewport_x.update(win_x, latest_time);
-        viewport_y.update(win_y, latest_time);
-        viewport_width.update(win_width, latest_time);
-        viewport_height.update(win_height, latest_time);
+        windows.viewport.update(glm::vec4(win_x, win_y, win_width, win_height), latest_time);
     } else {
         // Default case - no specific window handling needed
     }
@@ -363,8 +327,8 @@ void InputSystem::update_window_params(float& win_x, float& win_y, float& win_wi
 
 void InputSystem::update_mode() {
     // Example mode update logic based on key states
-    if (mouse_left_state.value) {
-        if (!mouse_left_state.changed_this_frame()) {
+    if (mouse.left_button.value) {
+        if (!mouse.left_button.changed_this_frame()) {
             set_mode(UserMode::MODE_DRAG);
         }
     } else {

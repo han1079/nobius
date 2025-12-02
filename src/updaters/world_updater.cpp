@@ -36,14 +36,13 @@ bool WorldUpdater::update_state_via_event() {
     DEBUG_HOOK_VAR_AS(translation.y, "WORLD_UPDATER_TRANSLATION_Y");
     float delta_zoom = 1.0f;
 
-    ImVec2 viewport_dims = ImVec2(in.viewport_width.value, in.viewport_height.value);
+    // Use new structured state for viewport dimensions
+    glm::vec4 viewport_rect = in.windows.viewport.value;
+    ImVec2 viewport_dims = ImVec2(viewport_rect.z, viewport_rect.w); // width, height
     float aspect_ratio = viewport_dims.x / viewport_dims.y;
 
     float pixels_per_world_unit = viewport_dims.y / world_units_per_screen_height;
     float effective_pixels_per_world_unit = pixels_per_world_unit * current_zoom;
-
-    float half_screen_height_eff_pixel = world_units_per_screen_height / 2.0f * effective_pixels_per_world_unit;
-    float half_screen_width_eff_pixel = half_screen_height_eff_pixel * aspect_ratio;
 
     // Projection Matrix: Defines the viewing volume in WORLD UNITS.
     // We do not use pixels here. The mapping from World -> NDC -> Pixels happens later.
@@ -56,15 +55,17 @@ bool WorldUpdater::update_state_via_event() {
 
 
     if ((uint32_t)current_mode & (uint32_t)UserMode::MODE_SELECT) {
-        if (in.mouse_wheel_dy.delta_value != 0.0f) {
-            float zoom_delta = in.mouse_wheel_dy.delta_value * 0.1f; // temporary sensitivity factor
+        // Use new structured mouse state for wheel delta
+        if (in.mouse.wheel_delta.delta_value != 0.0f) {
+            float zoom_delta = in.mouse.wheel_delta.delta_value * 0.1f; // temporary sensitivity factor
             float new_zoom = clamp(current_zoom * (1.0f + zoom_delta));
             current_zoom = new_zoom;
         }
 
         if ((uint32_t)current_mode & (uint32_t)UserMode::MODE_DRAG) {
             // Handle camera pan logic here
-            translation = in.get_mouse_delta_position();
+            // Use new structured mouse state for delta
+            translation = in.mouse.cartesian_pos.delta_value;
             if (translation != glm::vec2(0.0f)) {
                 glm::vec2 camera_delta = -translation / effective_pixels_per_world_unit;
                 glm::vec2 new_camera_position = camera_position + camera_delta;
@@ -82,7 +83,7 @@ bool WorldUpdater::update_state_via_event() {
     view_mat = zoom_mat * translation_mat;
     clip_transform_mat = projection_mat * view_mat;
 
-    // if (in.key_states[SDL_SCANCODE_A].just_became_true()) {
+    // if (in.keyboard.keys[SDL_SCANCODE_A].just_became_true()) {
     //     // Reset clip transform
     //     add_circle(glm::vec3(0.0f, 0.0f, 0.0f), 0.3f, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
     // }
@@ -118,16 +119,10 @@ bool WorldUpdater::submit_render_commands() {
     std::vector<unsigned int> all_indices;
 
     for (auto& [uuid, allocated_mem]: map) {
-
-        Debug::log("Submitting render command for entity UUID: " + std::to_string(uuid), DebugLevel::INFO);
         Entity& entity = m_entity_manager.EntityRegister.at(uuid);
         if (entity.is_visible()) {
             Debug::log("Submitting render command for visible entity UUID: " + std::to_string(uuid), DebugLevel::INFO);
             std::vector<int> shifted_indices = entity.get_indices();
-            std::cout << "Indices" << std::endl;
-            for (const auto& idx : shifted_indices) {
-                std::cout << idx << " ";
-            }
             std::cout << std::endl;
             // Shift indices based on allocated_mem.offset
             for (auto& index : shifted_indices) {

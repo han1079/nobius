@@ -58,7 +58,7 @@ bool ImGuiUpdater::init() {
 bool ImGuiUpdater::update_state_via_event() {
     // ImGuiUpdater no longer handles event ingestion - this is now handled by EventIngester
     // This method can be used for ImGui-specific event responses (theme changes, etc.)
-    auto input = Orchestrator::get()->get_input();
+    auto& input = Orchestrator::get()->get_input();
 
     if (input.just_pressed(SDL_SCANCODE_SPACE)) {
         Debug::log("Toggling Debug Console Visibility", DebugLevel::INFO);
@@ -71,25 +71,15 @@ bool ImGuiUpdater::update_state_via_dT(float dT) {
     // Synchronize ImGui window states with InputSystem's timestamped values 
     auto& input = Orchestrator::get()->get_input();
 
-    input.sidebar_x.update_dT(sidebar_state.pos.x, dT);
-    input.sidebar_y.update_dT(sidebar_state.pos.y, dT);
-    input.sidebar_width.update_dT(sidebar_state.size.x, dT);
-    input.sidebar_height.update_dT(sidebar_state.size.y, dT);
-
-    input.bottom_x.update_dT(bottom_panel_state.pos.x, dT);
-    input.bottom_y.update_dT(bottom_panel_state.pos.y, dT);
-    input.bottom_width.update_dT(bottom_panel_state.size.x, dT);
-    input.bottom_height.update_dT(bottom_panel_state.size.y, dT);
-
-    input.ribbon_x.update_dT(ribbon_state.pos.x, dT);
-    input.ribbon_y.update_dT(ribbon_state.pos.y, dT);
-    input.ribbon_width.update_dT(ribbon_state.size.x, dT);
-    input.ribbon_height.update_dT(ribbon_state.size.y, dT);
-
-    input.viewport_x.update_dT(main_window_state.pos.x, dT);
-    input.viewport_y.update_dT(main_window_state.pos.y, dT);
-    input.viewport_width.update_dT(main_window_state.size.x, dT);
-    input.viewport_height.update_dT(main_window_state.size.y, dT);
+    // Update structured state
+    input.windows.sidebar.update_dT(glm::vec4(sidebar_state.pos.x, sidebar_state.pos.y, 
+                                               sidebar_state.size.x, sidebar_state.size.y), dT);
+    input.windows.bottom_panel.update_dT(glm::vec4(bottom_panel_state.pos.x, bottom_panel_state.pos.y,
+                                                     bottom_panel_state.size.x, bottom_panel_state.size.y), dT);
+    input.windows.ribbon.update_dT(glm::vec4(ribbon_state.pos.x, ribbon_state.pos.y,
+                                              ribbon_state.size.x, ribbon_state.size.y), dT);
+    input.windows.viewport.update_dT(glm::vec4(main_window_state.pos.x, main_window_state.pos.y,
+                                                 main_window_state.size.x, main_window_state.size.y), dT);
 
     return true;
 }
@@ -97,11 +87,11 @@ bool ImGuiUpdater::update_state_via_dT(float dT) {
 bool ImGuiUpdater::submit_render_commands() {
     auto& renderer = Orchestrator::get()->get_renderer();
 
-    RenderCommand build_sidebar = {RenderCommandType::ImGuiWindow, [this](){this->build_sidebar();}, "build_sidebar"};
-    RenderCommand build_bottom_panel = {RenderCommandType::ImGuiWindow, [this](){this->build_bottom_panel();}, "build_bottom_panel"};
-    RenderCommand build_ribbon = {RenderCommandType::ImGuiWindow, [this](){this->build_ribbon();}, "build_ribbon"};
-    RenderCommand build_main_window = {RenderCommandType::ImGuiWindow, [this](){this->build_main_window();}, "build_main_window"};
-    RenderCommand build_debug_console = {RenderCommandType::ImGuiWindow, [this](){this->build_debug_console();}, "build_debug_console"};
+    RenderCommand build_sidebar = {RenderCommandType::ImGuiWindow, [this](){this->build_sidebar();}, "IMGUI_INTERNAL","build_sidebar"};
+    RenderCommand build_bottom_panel = {RenderCommandType::ImGuiWindow, [this](){this->build_bottom_panel();}, "IMGUI_INTERNAL","build_bottom_panel"};
+    RenderCommand build_ribbon = {RenderCommandType::ImGuiWindow, [this](){this->build_ribbon();}, "IMGUI_INTERNAL","build_ribbon"};
+    RenderCommand build_main_window = {RenderCommandType::ImGuiWindow, [this](){this->build_main_window();}, "IMGUI_INTERNAL","build_main_window"};
+    RenderCommand build_debug_console = {RenderCommandType::ImGuiWindow, [this](){this->build_debug_console();}, "IMGUI_INTERNAL","build_debug_console"};
 
     if(sidebar_state.visible) { renderer.submit_render_request(build_sidebar); }
     if(bottom_panel_state.visible) { renderer.submit_render_request(build_bottom_panel); }

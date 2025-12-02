@@ -3,23 +3,58 @@
 #include <core/common.h>
 #include <utils/timestamped_state.h>
 
+// A snapshot of a window's layout in screen coordinates (Top-Left Origin)
+// Components: x, y, width, height
+using WindowRect = TimeStampedValue<glm::vec4>;
+
+struct WindowLayout {
+    WindowRect sidebar;
+    WindowRect bottom_panel;
+    WindowRect ribbon;
+    WindowRect viewport;
+};
+
+struct MouseState {
+    // Raw Screen Coordinates (Origin: Top-Left, Y-Down)
+    // Used for: ImGui, SDL events, UI interaction
+    TimeStampedValue<glm::vec2> screen_pos;
+
+    // Cartesian Coordinates (Origin: Bottom-Left, Y-Up)
+    // Used for: World rendering, OpenGL, Math
+    // Calculated as: (screen_pos.x, window_height - screen_pos.y)
+    TimeStampedValue<glm::vec2> cartesian_pos;
+
+    // Relative Coordinates (Origin: Top-Left of the HOVERED element)
+    // Useful for local UI interaction
+    TimeStampedValue<glm::vec2> relative_pos;
+
+    TimeStampedValue<float> wheel_delta;
+    
+    TimeStampedValue<bool> left_button;
+    TimeStampedValue<bool> right_button;
+    TimeStampedValue<bool> middle_button;
+
+    // Context awareness
+    HoveredUIElement hovered_element = HoveredUIElement::NONE;
+    std::string hovered_element_name = "NONE";
+};
+
+struct KeyboardState {
+    TimeStampedValue<bool> ctrl;
+    TimeStampedValue<bool> shift;
+    TimeStampedValue<bool> alt;
+    TimeStampedValue<bool> keys[SDL_NUM_SCANCODES];
+};
+
 class InputSystem {
 public:
     InputSystem();
     ~InputSystem() = default;
 public:
-    // UI Layout tracking
-    TimeStampedFloat sidebar_x, sidebar_y, sidebar_width, sidebar_height;
-    TimeStampedFloat bottom_x, bottom_y, bottom_width, bottom_height;
-    TimeStampedFloat ribbon_x, ribbon_y, ribbon_width, ribbon_height;
-    TimeStampedFloat viewport_x, viewport_y, viewport_width, viewport_height;
-    // Input state
-    TimeStampedBool ctrl_state, shift_state, alt_state;
-    TimeStampedBool mouse_left_state, mouse_right_state, mouse_middle_state;
-    TimeStampedFloat mouse_wheel_dy;
-    TimeStampedFloat mouse_x, mouse_y;
-    TimeStampedFloat mouse_x_relative, mouse_y_relative;
-    TimeStampedBool key_states[SDL_NUM_SCANCODES];
+    // State Structures
+    WindowLayout windows;
+    MouseState mouse;
+    KeyboardState keyboard;
 
 private:
 
@@ -47,14 +82,14 @@ public:
     void begin_frame(float timestamp);
 
     // Input state queries
-    glm::vec2 get_mouse_position() const { return {mouse_x.value, mouse_y.value}; }
-    glm::vec2 get_mouse_relative_position() const { return {mouse_x_relative.value, mouse_y_relative.value}; }
-    glm::vec2 get_mouse_delta_position() const { return {mouse_x.delta_value, mouse_y.delta_value}; }
+    glm::vec2 get_mouse_position() const { return mouse.screen_pos.value; }
+    glm::vec2 get_mouse_relative_position() const { return mouse.relative_pos.value; }
+    glm::vec2 get_mouse_delta_position() const { return mouse.screen_pos.delta_value; }
     bool is_key_pressed(SDL_Scancode key) const;
     bool just_pressed(SDL_Scancode key) const;
-    bool is_ctrl_pressed() const { return ctrl_state.value; }
-    bool is_shift_pressed() const { return shift_state.value; }
-    bool is_alt_pressed() const { return alt_state.value; }
+    bool is_ctrl_pressed() const { return keyboard.ctrl.value; }
+    bool is_shift_pressed() const { return keyboard.shift.value; }
+    bool is_alt_pressed() const { return keyboard.alt.value; }
     bool is_mouse_pressed(int button) const;
     
     // Mode management

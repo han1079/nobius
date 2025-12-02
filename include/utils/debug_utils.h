@@ -34,7 +34,7 @@
         debug_console.hookVariable(name, std::ref(var))
     
     // Log debug message
-    #define DEBUG_LOG(msg) \
+    #define DEBUG_MESSAGE(msg) \
         debug_console.addMessage(std::string(__LINE__),"DEBUG: " + std::string(msg))
     
 #else
@@ -44,7 +44,7 @@
     #define DEBUG_HOOK_FUNCTION_NO_TIMER() ((void)0)
     #define DEBUG_HOOK_VAR(var) ((void)0)
     #define DEBUG_HOOK_VAR_AS(var, name) ((void)0)
-    #define DEBUG_LOG(msg) ((void)0)
+    #define DEBUG_MESSAGE(msg) ((void)0)
 #endif
 // Portable debug break macro
 

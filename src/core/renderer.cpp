@@ -4,10 +4,20 @@
 // Static callback wrapper for ImGui
 static void CustomCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd) {
     // Retrieve the shader pointer from UserCallbackData
+
+
     CommandBundle* bundle = static_cast<CommandBundle*>(cmd->UserCallbackData);
+
     Shader* shader = bundle->shader.get();
     Renderer* renderer = bundle->renderer;
     RenderCommand render_cmd = bundle->command;
+    
+    glScissor(static_cast<GLint>(renderer->get_main_window_params().x),
+               static_cast<GLint>(renderer->get_main_window_params().y),
+               static_cast<GLsizei>(renderer->get_main_window_params().z),
+               static_cast<GLsizei>(renderer->get_main_window_params().w));
+                    
+
     if (shader) {
         shader->bind();
 
@@ -103,6 +113,9 @@ void Renderer::submit_render_request(RenderCommand request) {
     if(request.type == RenderCommandType::ImGuiWindow) {
         Debug::log("Command wrapped: " + std::to_string((int)cmd_bundle.command.type), DebugLevel::TRACE);
     }
+
+    Debug::log("Submitting render request of type: " + std::to_string((int)cmd_bundle.command.type), DebugLevel::TRACE);
+    Debug::log("Command pointer pre-submission: " + std::to_string(reinterpret_cast<uintptr_t>(&(cmd_bundle.command))), DebugLevel::TRACE);
     command_queue.push(cmd_bundle);
 }
 
@@ -145,10 +158,10 @@ bool Renderer::start_frame() {
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport();
         gl_main_window_params = {
-            in.viewport_x.value,
-            in.viewport_y.value,
-            in.viewport_width.value,
-            in.viewport_height.value
+            in.windows.viewport.value.x,
+            in.windows.viewport.value.y,
+            in.windows.viewport.value.z,
+            in.windows.viewport.value.w,
         };
 
         ImVec2 display_size = ImGui::GetIO().DisplaySize;
@@ -174,14 +187,17 @@ bool Renderer::start_frame() {
 }
 
 void Renderer::process_render_submissions() {
+    std::vector<CommandBundle> commands_to_process;
+
     while (!command_queue.empty()) {
-        CommandBundle& cmd = command_queue.front();
-        Debug::log("Processing command of type: " + std::to_string((int)cmd.command.type), DebugLevel::TRACE);
-        process(cmd);
+        commands_to_process.push_back(std::move(command_queue.front()));
         command_queue.pop();
+        Debug::log("Processing command of type: " + std::to_string((int)commands_to_process.back().command.type), DebugLevel::TRACE);
+        process(commands_to_process.back());
     }
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    commands_to_process.clear();
 }
 
 void Renderer::process(CommandBundle& cmd) {
@@ -191,15 +207,19 @@ void Renderer::process(CommandBundle& cmd) {
 
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
         
-        GLCall(glEnable(GL_DEPTH_TEST));
-        GLCall(glEnable(GL_BLEND));
+        // Set viewport and scissor BEFORE adding callbacks so ResetRenderState knows what to restore
+        // GLCall(glEnable(GL_DEPTH_TEST));
+        // GLCall(glEnable(GL_BLEND));
+        // GLCall(glEnable(GL_SCISSOR_TEST));
 
-        GLCall(glViewport(
-            static_cast<GLint>(gl_main_window_params.x),
-            static_cast<GLint>(gl_main_window_params.y),
-            static_cast<GLsizei>(gl_main_window_params.z),
-            static_cast<GLsizei>(gl_main_window_params.w)
-        ));
+        // GLCall(glViewport(
+        //     static_cast<GLint>(gl_main_window_params.x),
+        //     static_cast<GLint>(gl_main_window_params.y),
+        //     static_cast<GLsizei>(gl_main_window_params.z),
+        //     static_cast<GLsizei>(gl_main_window_params.w)
+        // ));
+       
+        
         // Resolve the shader pointer. 
         // Note: We rely on ShaderManager keeping the shared_ptr alive for the duration of the frame.
         

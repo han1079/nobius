@@ -32,6 +32,7 @@ struct CommandBundle {
     std::shared_ptr<Shader> shader;
     RenderCommand command;
     Renderer* renderer;
+    glm::vec4 scissor_window; // x, y, width, height
 };
 
 class Renderer {
@@ -81,6 +82,8 @@ public:
     void init();
     void render();
     void submit_render_request(RenderCommand request);
+    glm::vec4 get_viewport_params() const { return gl_viewport_params; }
+    glm::vec4 get_main_window_params() const { return gl_main_window_params; }
 
     std::queue<CommandBundle>& get_command_queue() { return command_queue; }
 

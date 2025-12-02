@@ -155,33 +155,6 @@ public:
             allocator.mark_uuid_clean(alloc.uuid);
             debug_vertex = vertices[alloc.offset].bound.x;
             DEBUG_HOOK_VAR_AS(debug_vertex, "First Vertex After Sync");
-            for (int i = alloc.offset; i < alloc.offset + alloc.vertex_count; i++) {
-                Debug::log("Vertex Bound " + std::to_string(i) + ": (" +
-                    std::to_string(vertices[i].bound.x) + ", " +
-                    std::to_string(vertices[i].bound.y) + ", " +
-                    std::to_string(vertices[i].bound.z) + ")", DebugLevel::TRACE);
-
-                Debug::log("Vertex Start Pt " + std::to_string(i) + ": (" +
-                    std::to_string(vertices[i].start_pt.x) + ", " +
-                    std::to_string(vertices[i].start_pt.y) + ", " +
-                    std::to_string(vertices[i].start_pt.z) + ")", DebugLevel::TRACE);
-
-                Debug::log("Vertex End Pt " + std::to_string(i) + ": (" +
-                    std::to_string(vertices[i].end_pt.x) + ", " +
-                    std::to_string(vertices[i].end_pt.y) + ", " +
-                    std::to_string(vertices[i].end_pt.z) + ")", DebugLevel::TRACE);
-                
-                Debug::log("Vertex Control Pt 1 " + std::to_string(i) + ": (" +
-                    std::to_string(vertices[i].control_pt_1.x) + ", " +
-                    std::to_string(vertices[i].control_pt_1.y) + ", " +
-                    std::to_string(vertices[i].control_pt_1.z) + ")", DebugLevel::TRACE);
-
-                Debug::log("Vertex filled " + std::to_string(i) + ": " +
-                    std::to_string(vertices[i].filled), DebugLevel::TRACE);
-
-                Debug::log("Vertex thickness " + std::to_string(i) + ": " +
-                    std::to_string(vertices[i].thickness), DebugLevel::TRACE);
-            }
             
         }
     }
