@@ -35,7 +35,6 @@ public:
 
 private:
 
-    uint64_t generate_uuid();
     std::set<uint64_t> dirty_uuids;
 
 

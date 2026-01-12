@@ -1,5 +1,5 @@
 #pragma once
-#include <core/base_updater.h>
+#include <updaters/base_updater.h>
 #include <pch.h>
 #include <core/common.h>
 #include <core/entity.h>

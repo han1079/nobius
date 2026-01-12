@@ -1,5 +1,5 @@
 #include <core/renderer.h>
-#include <updaters/orchestrator.h>
+#include <core/orchestrator.h>
 
 // Static callback wrapper for ImGui
 static void CustomCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd) {

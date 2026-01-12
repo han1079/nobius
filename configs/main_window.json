@@ -1,0 +1,13 @@
+{
+    "visible" : true,
+    "window_name": "Main Window",
+    "initial_pos_factor": [
+        0.0,
+        0.1
+    ],
+    "initial_size_factor": [
+        0.7,
+        0.8
+    ],
+    "window_flags": []
+}

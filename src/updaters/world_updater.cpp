@@ -1,6 +1,7 @@
 #include <updaters/world_updater.h>
-#include <updaters/orchestrator.h>
+#include <core/orchestrator.h>
 #include <core/entity.h>
+#include <engines/geometry.h>
 
 float clamp(float value, float min = 0.001f, float max = 1000.0f) {
     if (value < min) return min;
@@ -74,8 +75,8 @@ bool WorldUpdater::update_state_via_event() {
         }
     }
 
-    glm::mat4 zoom_mat = Transform::Zoom(current_zoom);
-    glm::mat4 translation_mat = Transform::Translate(glm::vec3(-camera_position, 0.0f));
+    glm::mat4 zoom_mat = Geometry::Transform::Zoom(current_zoom);
+    glm::mat4 translation_mat = Geometry::Transform::Translate(glm::vec3(-camera_position, 0.0f));
 
     // projection_mat is already set above in World Units.
     // We do NOT overwrite it with pixel coordinates.

@@ -6,34 +6,7 @@
 #include <core/shader.h>
 #include <core/gpu_buffers.h>
 
-enum class RenderCommandType {
-    None = 0,
-    Entity = 1,
-    ImGuiWindow = 2
-};
 
-struct RenderCommand {
-    RenderCommandType type = RenderCommandType::None;
-    std::function<void()> execute_func;
-    
-    // Draw Context
-    std::string shader_name = "None";
-    std::string updater_name = "None";
-    // Uniforms / State
-    glm::vec4 color = {1.0f, 1.0f, 1.0f, 1.0f};
-    glm::mat4 transform = glm::mat4(1.0f);
-    
-    // Debugging
-    std::string debug_name = "None";
-
-};
-
-struct CommandBundle {
-    std::shared_ptr<Shader> shader;
-    RenderCommand command;
-    Renderer* renderer;
-    glm::vec4 scissor_window; // x, y, width, height
-};
 
 class Renderer {
 public:

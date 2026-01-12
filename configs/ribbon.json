@@ -1,0 +1,13 @@
+{
+    "visible" : true,
+    "window_name": "Ribbon",
+    "initial_pos_factor": [
+        0.0,
+        0.0
+    ],
+    "initial_size_factor": [
+        1.0, 
+        0.1
+    ],
+    "window_flags": []
+}

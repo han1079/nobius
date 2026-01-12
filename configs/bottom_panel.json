@@ -1,0 +1,13 @@
+{
+    "visible" : true,
+    "window_name": "Bottom Panel",
+    "initial_pos_factor": [
+        0.0,
+        0.9
+    ],
+    "initial_size_factor": [
+        1.0,
+        0.1 
+    ],
+    "window_flags": []
+}

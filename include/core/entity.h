@@ -27,21 +27,6 @@ public:
 };
 class Entity; // Forward declaration
 
-namespace Affine {
-    void TransformCircle(Entity& circle);
-}
-
-namespace Geometry {
-    void CreateCircle(Entity& circle);
-}
-
-namespace Transform {
-    glm::mat4 Translate(const glm::vec3& translation);
-    glm::mat4 Scale(const glm::vec3& scale_factors);
-    glm::mat4 Zoom(float zoom_factor);
-    glm::mat4 Rotate2D(float angle_in_radians);
-}
-
 
 enum class EntityType {
     CIRCLE,
@@ -118,17 +103,7 @@ public:
         void mark_dirty() { transform_dirty = true; }
         void mark_clean() { transform_dirty = false; }
 
-        inline glm::mat4 update_transform_matrix() {
-            if (transform_dirty) {
-                glm::mat4 translation_mat = Transform::Translate(position);
-                glm::mat4 rotation_mat = Transform::Rotate2D(rotation);
-                glm::mat4 size_mat = Transform::Zoom(size);
-                cached_transform = translation_mat * rotation_mat * size_mat;
-
-                mark_clean();
-            }
-            return cached_transform;
-        }
+        glm::mat4 update_transform_matrix(); 
     };
     Pose pose;
 

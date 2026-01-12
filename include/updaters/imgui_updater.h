@@ -2,7 +2,7 @@
 
 #include <pch.h>
 #include <core/common.h>
-#include <core/base_updater.h>
+#include <updaters/base_updater.h>
 #include <utils/imgui_style_loader.h>
 
 struct ImGuiWidgetState {

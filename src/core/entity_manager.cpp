@@ -1,5 +1,6 @@
 #include <core/entity_manager.h>
-#include <updaters/orchestrator.h>
+#include <core/orchestrator.h>
+#include <engines/geometry.h>
 
 uint64_t EntityManager::generate_and_register_entity() {
     uint64_t uuid = generate_uuid();
@@ -14,7 +15,7 @@ uint64_t EntityManager::generate_and_register_entity() {
 void EntityManager::run_vertex_transform(Entity& entity) {
     switch (entity.get_type()) {
         case EntityType::CIRCLE:
-            Affine::TransformCircle(entity);
+            Geometry::Affine::TransformCircle(entity);
             break;
         // Add cases for other entity types as needed
         default:
@@ -29,13 +30,15 @@ void EntityManager::configure_entity_as_type(const uint64_t& uuid, EntityType ty
     }
 
     if (type == EntityType::CIRCLE) {
-        Geometry::CreateCircle(it->second);
+        Geometry::Build::CreateCircle(it->second);
     }
 }
 
 void EntityManager::remove_entity(const uint64_t& uuid) {
     if(validate_entity_exists(uuid)) { 
         EntityRegister.erase(uuid); 
+        auto& va = Orchestrator::get()->get_vertex_allocator();
+        va.memory_free(uuid);
     } else { 
         Debug::log("Attempted to remove non-existent entity UUID: " +  std::to_string(uuid), DebugLevel::ERROR); 
     } 
@@ -83,13 +86,6 @@ void EntityManager::set_entity_rotation(const uint64_t& uuid, float rot) {
     }
 }
 
-uint64_t EntityManager::generate_uuid() {
-    static std::random_device rd;
-    static std::mt19937_64 rng(rd());
-    static std::uniform_int_distribution<uint64_t> distr;
-
-    return distr(rng);
-}
 
 BatchedMemoryMap EntityManager::update_gpu_buffer()
 {

@@ -1,0 +1,8 @@
+{
+    "to_build" : [
+       "bottom_panel.json",
+       "main_window.json",
+       "ribbon.json",
+       "sidebar.json"
+    ]
+}

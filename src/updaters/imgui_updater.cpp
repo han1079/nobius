@@ -1,6 +1,6 @@
 #include <updaters/imgui_updater.h>
 #include <iostream>
-#include <updaters/orchestrator.h>
+#include <core/orchestrator.h>
 
 #define STYLEPATH (PROJECT_SOURCE_DIR + std::string("/configs/imgui_style_default.json")).c_str()
 
