@@ -7,6 +7,12 @@
 #include <core/input_system.h>
 #include <core/dispatch_history.h>
 
+enum class SessionType {
+    UI,
+    Canvas,
+    Selection,
+};
+
 class Session {
 public:
     Session() = delete; // No default constructor. Create constructor for overridden classes only.
@@ -28,10 +34,10 @@ public:
           p_renderer(&renderer),
           p_input_system(&input_system),
           p_aggregate_manager(&aggregate_manager)
-    {
-        on_enter();
-    }
-    ~Session();
+    {}
+    virtual ~Session();
+
+    bool ready_to_be_popped = false;
 
 protected:
     const std::string& get_session_name() const { return m_session_name; }

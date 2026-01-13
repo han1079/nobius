@@ -42,6 +42,9 @@ void UI::initialize_imgui(SDL_Window* window, SDL_GLContext gl_context, float ma
     // Renders a warmup frame to ensure style/font settings are applied
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
+    // ImGui::NewFrame();
+    // ImGui::Render();
+    // ImGui::EndFrame();
 }
 
 void UI::push_event_to_imgui(const SDL_Event* event) {
@@ -50,9 +53,9 @@ void UI::push_event_to_imgui(const SDL_Event* event) {
 
 void UI::update_imgui_state() {
     // This actually processes the event queue and updates ImGui state
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-    ImGui::NewFrame();
+    // ImGui_ImplOpenGL3_NewFrame();
+    // ImGui_ImplSDL2_NewFrame();
+    // ImGui::NewFrame();
 }
 
 void UI::build_bottom_panel(WindowState& state) {
@@ -101,6 +104,24 @@ void UI::build_main_window(WindowState& state) {
     ImGui::End();
     
 }
+void UI::build_sidebar(WindowState& state) {
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 full_window_size = io.DisplaySize;
+
+    // Sidebar takes up all of the right side
+    // and extends to 30% of the way along the x side on initial layout
+    ImGui::SetNextWindowPos(ImVec2(full_window_size.x * 0.7, 0), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(full_window_size.x * 0.3, full_window_size.y), ImGuiCond_FirstUseEver);
+    ImGui::Begin(state.window_name.c_str(), &state.visible);
+    state.pos = ImGui::GetWindowPos();
+    state.size = ImGui::GetWindowSize();
+    ImGui::Text("Info Panel");
+    ImGui::Text("%s", PROJECT_SOURCE_DIR);
+    ImGui::End();
+    
+}
+
 
 void UI::build_debug_console(WindowState& state) {
     bool show = true;

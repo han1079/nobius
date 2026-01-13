@@ -1,6 +1,7 @@
 #include <core/orchestrator.h>
 #include <core/common.h>
 #include <iostream>
+#include <sessions/UISession.h>
 
 Orchestrator* Orchestrator::get(){
     return m_orchestrator_ptr;
@@ -33,12 +34,16 @@ void Orchestrator::push_session(std::unique_ptr<Session> new_session) {
 
 void Orchestrator::pop_session() {
     if (!m_session_stack.empty()) {
-        m_session_stack.back()->on_exit();
         m_session_stack.pop_back();
     }
 }
 
 void Orchestrator::process_session_request() {
+    // Process pops first
+    while (!m_session_stack.empty() && m_session_stack.back()->ready_to_be_popped) {
+        pop_session();
+    }
+
     for (const auto& session_name : m_requested_session_push) {
         // Here you would create a new session based on the session_name
         // For example:
@@ -47,18 +52,21 @@ void Orchestrator::process_session_request() {
     }
     m_requested_session_push.clear();
 
-    for (auto name_it = m_requested_session_pop.begin(); name_it != m_requested_session_pop.end(); ++name_it) {
-        if (m_session_stack.empty()) {
-            continue;
-        }
+}
 
-        if (m_session_stack.back()->get_session_name() == *name_it) {
-            pop_session();
-        } else {
-            Debug::log("Session pop request for '" + *name_it + "' does not match the top session '" + m_session_stack.back()->get_session_name() + "'. Pop request ignored.", DebugLevel::WARN);
-        }
-    }
-    m_requested_session_pop.clear();
+void Orchestrator::init(){
+    m_vertex_allocator.init();
+    // Initialize renderer first to create Window/Context
+    m_renderer.init(); 
+    UISession ui_session(
+        "Main UI Session",
+        m_entity_manager,
+        m_renderer,
+        m_aggregate_manager,
+        m_input_system
+    );
+    ui_session.on_enter();
+    push_session(std::make_unique<UISession>(std::move(ui_session)));
 }
 
 void Orchestrator::run() {
@@ -84,6 +92,8 @@ void Orchestrator::run() {
         float dT = delta.count();
         m_input_system.update_time(current_time.time_since_epoch().count());
 
+        process_session_request();
+
         // Process ALL pending events, not just one
         while (SDL_PollEvent(&sdl_event)) {
             TIME_LOCATION();
@@ -98,12 +108,19 @@ void Orchestrator::run() {
 
         }
 
-
-
         m_input_system.save_accumulated_changes();
         m_input_system.update_mode();
 
         loop_event_ct = 0;
+
+        DispatchHistory dispatch_history;
+        for (auto& session : m_session_stack) {
+            session->process_input_deltas(dispatch_history);
+        }
+
+        for (auto& session : m_session_stack) {
+            session->process_time_deltas(dT);
+        }
 
         m_renderer.render();
 

@@ -52,15 +52,17 @@ set(IMGUI_SOURCES ${CMAKE_SOURCE_DIR}/ext/imgui/imgui.cpp
 )
 
 set(CORE_BUILD ${CMAKE_SOURCE_DIR}/src/updaters/base_updater.cpp
+                ${CMAKE_SOURCE_DIR}/src/sessions/UISession.cpp
+                ${CMAKE_SOURCE_DIR}/src/engines/ui.cpp
+                ${CMAKE_SOURCE_DIR}/src/engines/geometry.cpp
+                ${CMAKE_SOURCE_DIR}/src/core/session.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/vertex_allocator.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/entity_manager.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/common.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/entity.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/shader.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/orchestrator.cpp
-                ${CMAKE_SOURCE_DIR}/src/updaters/world_updater.cpp
-                ${CMAKE_SOURCE_DIR}/src/updaters/input_system.cpp
-                ${CMAKE_SOURCE_DIR}/src/updaters/imgui_updater.cpp
+                ${CMAKE_SOURCE_DIR}/src/core/input_system.cpp
                 ${CMAKE_SOURCE_DIR}/src/core/renderer.cpp
                 ${CMAKE_SOURCE_DIR}/src/utils/debug_console.cpp)
 

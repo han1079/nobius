@@ -2,8 +2,7 @@
 #include <core/common.h>
 #include <pch.h>
 int main() {
-    LoadSpec lspec = LoadSpec();
-    Orchestrator app(lspec);
+    Orchestrator app;
     app.init();
     app.run();
     return 0;

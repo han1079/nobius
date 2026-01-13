@@ -1,6 +1,6 @@
 #pragma once
 #include <pch.h>
-#include <core/common.h>
+#include <engines/ui.h>
 #include <core/session.h>
 
 class UISession : public Session {
@@ -27,6 +27,8 @@ public:
         )
     {}
     ~UISession() = default;
+
+    friend class Orchestrator;
 
 protected:
 

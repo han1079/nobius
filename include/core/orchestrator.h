@@ -4,9 +4,6 @@
 #include <core/common.h>
 #include <stack>
 
-
-#include <updaters/world_updater.h>
-#include <updaters/imgui_updater.h>
 #include <core/input_system.h>
 #include <core/vertex_allocator.h>
 #include <core/entity_manager.h>
@@ -34,7 +31,7 @@ class Orchestrator {
         EntityManager& get_entity_manager() { return m_entity_manager; }
         AggregateManager& get_aggregate_manager() { return m_aggregate_manager; }
 
-        void 
+        void init();
         
     private:
 
@@ -42,8 +39,7 @@ class Orchestrator {
 
         inline static Orchestrator* m_orchestrator_ptr = nullptr;
         std::vector<std::unique_ptr<Session>> m_session_stack;
-        std::vector<std::string> m_requested_session_push;
-        std::vector<std::string> m_requested_session_pop;
+        std::vector<SessionType> m_requested_session_push;
 
         InputSystem m_input_system;
         EntityManager m_entity_manager;

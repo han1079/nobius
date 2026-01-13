@@ -140,7 +140,7 @@ class WorldUpdater;
 class ImGuiUpdater;
 class ModeUpdater;
 class SystemState;
-class WindowState;
+// class WindowState;
 class RenderCommandBuffer;
 class Shader;
 class ShaderManager;

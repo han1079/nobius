@@ -1,5 +1,4 @@
 #include <sessions/UISession.h>
-#include <engines/ui.h>
 #include <utils/file_utils.h>
 
 void UISession::on_enter() {
@@ -19,8 +18,8 @@ void UISession::process_input_deltas(DispatchHistory& h) {
 }
 
 void UISession::process_time_deltas(float dT) {
-    UI::
     // TODO: Update UI animations, tweens, etc.
+    return;
 }
 
 void UISession::submit_render_request() {
